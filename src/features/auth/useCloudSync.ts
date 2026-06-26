@@ -17,6 +17,7 @@ import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { useStore } from '../../store/store';
 import { mergeSnapshots } from './merge';
 import { pullSnapshot, pushSnapshot } from './cloud';
+import { setAnalyticsUserId } from '../analytics/track';
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error';
 
@@ -50,12 +51,15 @@ export function useCloudSync(): CloudSync {
     let active = true;
 
     supabase.auth.getSession().then(({ data }) => {
-      if (active) setUser(data.session?.user ?? null);
+      if (!active) return;
+      setUser(data.session?.user ?? null);
+      setAnalyticsUserId(data.session?.user?.id ?? null);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange(
       (_event: string, session: Session | null) => {
         setUser(session?.user ?? null);
+        setAnalyticsUserId(session?.user?.id ?? null);
         if (session?.user) setEmailSent(false);
       },
     );

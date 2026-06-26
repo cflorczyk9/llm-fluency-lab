@@ -13,6 +13,7 @@ import Panel from '../../components/Panel';
 import Tag from '../../components/Tag';
 import { useStore } from '../../store/store';
 import { previewIntervals } from '../../lib/fsrs';
+import { track } from '../analytics/track';
 import type { Card, Rating } from '../../types';
 
 import {
@@ -151,6 +152,13 @@ export default function Study() {
     // Side effect lives outside the state updater so StrictMode's double-invoke
     // never double-grades the card.
     gradeCard(current.id, rating);
+    track('card_graded', {
+      cardId: current.id,
+      categoryKey: current.categoryKey,
+      difficulty: current.difficulty,
+      rating,
+      confidence: s.conf,
+    });
     setSession((prev) => {
       const samples =
         prev.conf != null ? [...prev.samples, { confidence: prev.conf, rating }] : prev.samples;
@@ -326,7 +334,19 @@ export default function Study() {
                   )}
                   <div className="watch">
                     {video && (
-                      <a href={video.url} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() =>
+                          track('video_opened', {
+                            source: 'study_card',
+                            cardId: current.id,
+                            categoryKey: current.categoryKey,
+                            url: video.url,
+                          })
+                        }
+                      >
                         Watch the short video
                       </a>
                     )}

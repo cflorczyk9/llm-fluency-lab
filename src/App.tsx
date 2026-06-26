@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Button from './components/Button';
 import Tabs, { type TabItem } from './components/Tabs';
 import AccountBar from './features/auth/AccountBar';
+import { track } from './features/analytics/track';
 import { isSupabaseConfigured } from './lib/supabase';
 import { useStore } from './store/store';
 
@@ -60,7 +61,10 @@ export default function App() {
   //   'llm-fluency-lab:navigate' detail = { view, categoryKey } (Study visual guide)
   useEffect(() => {
     function go(target: unknown) {
-      if (isViewKey(target)) setView(target);
+      if (isViewKey(target)) {
+        setView(target);
+        track('view_opened', { view: target, source: 'nav' });
+      }
     }
     function onNav(e: Event) {
       go((e as CustomEvent).detail);
@@ -126,7 +130,14 @@ export default function App() {
           </div>
         </div>
         <div className="toolbar">
-          <Tabs items={TABS} active={view} onChange={setView} />
+          <Tabs
+            items={TABS}
+            active={view}
+            onChange={(v) => {
+              setView(v);
+              track('view_opened', { view: v, source: 'tab' });
+            }}
+          />
           <Button small variant="ghost" onClick={handleExport}>
             Export
           </Button>

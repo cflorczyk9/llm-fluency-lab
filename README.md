@@ -188,6 +188,19 @@ To turn it on:
    `VITE_SUPABASE_ANON_KEY` from Project Settings → API. Both are public,
    browser-safe values; RLS is what protects the data.
 
+### Usage analytics
+
+When cloud sync is on, the app also records lightweight usage events **for
+signed-in users only** — there is no anonymous tracking. Each event is one row
+in an `events` table (migration `0002_events.sql`), tied to the user and guarded
+by the same Row Level Security: a user can insert and read only their own
+events. The tracked events are: tab/view opened, module opened, card graded
+(with the rating), video opened, and diagnostic completed.
+
+You (the project owner) aggregate across all users from the Supabase SQL editor
+with the service role, which bypasses RLS. The migration file includes ready-to-
+run example queries (most-opened modules, hardest cards, most-visited tabs).
+
 ## Deploying
 
 The app is a static Vite build (`npm run build` → `dist/`), so any static host
