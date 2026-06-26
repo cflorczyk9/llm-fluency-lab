@@ -112,6 +112,28 @@ sampling (Inference and Decoding), and backpropagation (Pretraining and
 Scaling). The diagrams make no network calls, honor reduced-motion settings, and
 fall back to a static labeled picture if scripting is turned off.
 
+## Learning paths (beginner, intermediate, expert)
+
+If you would rather be told exactly what to do each day than assemble your own
+study, pick a learning path on the Home tab. Each path scopes the deck to a
+realistic goal and lays out a day-by-day schedule:
+
+- **Beginner**, about 5 weeks at ~18 minutes a day: 9 modules covering how the
+  machine works plus prompting and context, no math. A real working mental model.
+- **Intermediate**, about 11 weeks at ~28 minutes a day: 19 modules, the daily
+  practitioner skills (prompting, RAG, tools, evals) and the systems side.
+- **Expert**, about 10 weeks at ~45 minutes a day: all 24 modules including the
+  advanced cards and the judgment and frontier material.
+
+Each path gives you a schedule (which module to learn and how many new cards to
+take each day), and the spaced-repetition deck stays the daily engine underneath.
+The modules are grouped into sections, and each section ends in a short
+multiple-choice **section test** drawn from that section's cards. If you do not
+pass, the app does a gap analysis: it names the specific modules and subtopics
+you are weak on, links you back to them, and lets you retry. Choosing a path
+seeds from your placement test if you took one, and your card progress carries
+across paths if you switch.
+
 ## The learning science
 
 This app is built on a few well-supported ideas from how memory actually works.
