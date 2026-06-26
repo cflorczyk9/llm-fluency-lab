@@ -22,6 +22,7 @@ import type {
   CardState,
   DailyLogEntry,
   DiagnosticResult,
+  LevelEnrollment,
   ProgramPlan,
 } from '../../types';
 
@@ -89,6 +90,27 @@ function pickLater<T>(
   return stamp(a) >= stamp(b) ? a : b;
 }
 
+// How far along an enrollment is: passed sections dominate, then schedule
+// position, then attempts. Used to keep the more-progressed enrollment on merge.
+function enrollmentProgress(e: LevelEnrollment): number {
+  const passed = Object.values(e.sectionProgress).filter(
+    (s) => s.status === 'passed',
+  ).length;
+  return passed * 100000 + e.currentDayIndex * 100 + e.attempts.length;
+}
+
+function pickEnrollment(
+  a: LevelEnrollment | null,
+  b: LevelEnrollment | null,
+): LevelEnrollment | null {
+  if (!a) return b;
+  if (!b) return a;
+  const pa = enrollmentProgress(a);
+  const pb = enrollmentProgress(b);
+  if (pa !== pb) return pa > pb ? a : b;
+  return a.startedAt >= b.startedAt ? a : b;
+}
+
 export function mergeSnapshots(local: Snapshot, remote: Snapshot): Snapshot {
   return {
     cardStates: mergeCardStates(local.cardStates, remote.cardStates),
@@ -106,5 +128,6 @@ export function mergeSnapshots(local: Snapshot, remote: Snapshot): Snapshot {
     ),
     // You're actively on the local device; its settings win.
     settings: local.settings,
+    enrollment: pickEnrollment(local.enrollment, remote.enrollment),
   };
 }

@@ -14,13 +14,23 @@ import type {
   DailyLogEntry,
   DiagnosticResult,
   FsrsParams,
+  LevelEnrollment,
+  LevelKey,
   ProgramPlan,
   Rating,
+  SectionProgress,
+  SectionTestAttempt,
   Settings,
 } from '../types';
 import { emptyState, review } from '../lib/fsrs';
 import { overallFluency } from '../lib/fluency';
 import { categories } from '../data/content';
+import { LEVELS, totalStudyDays } from '../data/levels';
+import {
+  buildPlanFromLevel,
+  initialEnrollment,
+  nextSectionId,
+} from '../features/levels/plan';
 
 const STORAGE_KEY = 'llm-fluency-lab/v1';
 
@@ -38,6 +48,7 @@ export interface PersistedState {
   lessons: Record<string, { startedAt?: number }>;
   dailyLog: DailyLogEntry[];
   settings: Settings;
+  enrollment: LevelEnrollment | null;
 }
 
 // The cloud-sync snapshot is exactly the locally persisted state. Keeping these
@@ -49,6 +60,12 @@ interface StoreActions {
   setDiagnostic: (result: DiagnosticResult) => void;
   setProgram: (plan: ProgramPlan) => void;
   seedKnown: (cardIds: string[]) => void;
+
+  // Learning levels
+  chooseLevel: (level: LevelKey) => void;
+  advanceDay: () => void;
+  recordSectionTest: (attempt: SectionTestAttempt) => void;
+  leaveLevel: () => void;
   startLesson: (key: string) => void;
   recordDailySnapshot: () => void;
   updateSettings: (partial: Partial<Settings>) => void;
@@ -75,6 +92,7 @@ const INITIAL_PERSISTED: PersistedState = {
   lessons: {},
   dailyLog: [],
   settings: DEFAULT_SETTINGS,
+  enrollment: null,
 };
 
 // Every card in the deck, in content (path) order.
@@ -133,6 +151,74 @@ export const useStore = create<Store>()(
         });
       },
 
+      chooseLevel: (level) => {
+        const now = Date.now();
+        const plan = LEVELS[level];
+        const program = buildPlanFromLevel(plan, now);
+        set({ enrollment: initialEnrollment(plan, now), program });
+        // Match Study intake to the level's pace.
+        get().updateSettings({
+          dailyNewCap: program.dailyNewTarget,
+          requestRetention: program.requestRetention,
+        });
+        // If a diagnostic already ran, seed the cards it found known.
+        const diag = get().diagnostic;
+        if (diag) {
+          const known = diag.responses
+            .filter((r) => r.outcome === 'knew')
+            .map((r) => r.cardId);
+          if (known.length) get().seedKnown(known);
+        }
+      },
+
+      advanceDay: () =>
+        set((s) => {
+          if (!s.enrollment) return {};
+          const total = totalStudyDays(LEVELS[s.enrollment.level]);
+          const currentDayIndex = Math.min(total, s.enrollment.currentDayIndex + 1);
+          return { enrollment: { ...s.enrollment, currentDayIndex } };
+        }),
+
+      recordSectionTest: (attempt) =>
+        set((s) => {
+          if (!s.enrollment) return {};
+          const plan = LEVELS[s.enrollment.level];
+          const prev = s.enrollment.sectionProgress[attempt.sectionId];
+          const updated: SectionProgress = {
+            sectionId: attempt.sectionId,
+            status: attempt.passed || prev?.status === 'passed' ? 'passed' : 'available',
+            bestScorePct: Math.max(prev?.bestScorePct ?? 0, attempt.scorePct),
+            attempts: (prev?.attempts ?? 0) + 1,
+            lastAttemptAt: attempt.completedAt,
+          };
+          const sectionProgress = {
+            ...s.enrollment.sectionProgress,
+            [attempt.sectionId]: updated,
+          };
+          // Passing unlocks the next section's new-card intake.
+          if (attempt.passed) {
+            const nextId = nextSectionId(plan, attempt.sectionId);
+            const np = nextId ? sectionProgress[nextId] : undefined;
+            if (nextId && (!np || np.status === 'locked')) {
+              sectionProgress[nextId] = {
+                sectionId: nextId,
+                status: 'available',
+                attempts: np?.attempts ?? 0,
+                bestScorePct: np?.bestScorePct,
+              };
+            }
+          }
+          return {
+            enrollment: {
+              ...s.enrollment,
+              sectionProgress,
+              attempts: [...s.enrollment.attempts, attempt],
+            },
+          };
+        }),
+
+      leaveLevel: () => set({ enrollment: null }),
+
       startLesson: (key) =>
         set((s) => ({
           lessons: {
@@ -170,9 +256,10 @@ export const useStore = create<Store>()(
       resetAll: () => set({ ...INITIAL_PERSISTED }),
 
       exportJSON: () => {
-        const { cardStates, program, diagnostic, lessons, dailyLog, settings } = get();
+        const { cardStates, program, diagnostic, lessons, dailyLog, settings, enrollment } =
+          get();
         return JSON.stringify(
-          { version: 1, cardStates, program, diagnostic, lessons, dailyLog, settings },
+          { version: 1, cardStates, program, diagnostic, lessons, dailyLog, settings, enrollment },
           null,
           2,
         );
@@ -184,8 +271,9 @@ export const useStore = create<Store>()(
       },
 
       getSnapshot: () => {
-        const { cardStates, program, diagnostic, lessons, dailyLog, settings } = get();
-        return { cardStates, program, diagnostic, lessons, dailyLog, settings };
+        const { cardStates, program, diagnostic, lessons, dailyLog, settings, enrollment } =
+          get();
+        return { cardStates, program, diagnostic, lessons, dailyLog, settings, enrollment };
       },
 
       loadSnapshot: (snap) => {
@@ -196,6 +284,7 @@ export const useStore = create<Store>()(
           lessons: snap.lessons ?? {},
           dailyLog: snap.dailyLog ?? [],
           settings: { ...DEFAULT_SETTINGS, ...(snap.settings ?? {}) },
+          enrollment: snap.enrollment ?? null,
         });
       },
 
@@ -253,6 +342,7 @@ export const useStore = create<Store>()(
         lessons: state.lessons,
         dailyLog: state.dailyLog,
         settings: state.settings,
+        enrollment: state.enrollment,
       }),
     },
   ),

@@ -7,7 +7,7 @@ import { track } from './features/analytics/track';
 import { isSupabaseConfigured } from './lib/supabase';
 import { useStore } from './store/store';
 
-import Program from './features/program/Program';
+import Path from './features/levels/Path';
 import Learn from './features/learn/Learn';
 import Study from './features/study/Study';
 import Dashboard from './features/dashboard/Dashboard';
@@ -26,7 +26,7 @@ const TABS: ReadonlyArray<TabItem<ViewKey>> = [
 function ActiveView({ view }: { view: ViewKey }) {
   switch (view) {
     case 'program':
-      return <Program />;
+      return <Path />;
     case 'learn':
       return <Learn />;
     case 'study':

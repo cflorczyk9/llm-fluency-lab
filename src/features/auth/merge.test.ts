@@ -35,6 +35,7 @@ function snapshot(partial: Partial<Snapshot>): Snapshot {
     lessons: {},
     dailyLog: [],
     settings: SETTINGS,
+    enrollment: null,
     ...partial,
   };
 }
