@@ -1,0 +1,273 @@
+/* Study session styles, ported from the original "Briefly light" flashcard
+   stage. These class names are local to the Study feature. Shared primitives
+   (.btn, .tag, .panel, .progress) live in the global stylesheets. */
+
+.study-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.filter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.filter-wrap .toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+}
+.study-select {
+  appearance: none;
+  background: var(--panel2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  font: inherit;
+  padding: 8px 30px 8px 12px;
+  border-radius: 9px;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 16px, calc(100% - 11px) 16px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.pill {
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+/* Session progress strip */
+.session-progress {
+  height: 6px;
+  background: var(--panel2);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  margin-bottom: 16px;
+}
+.session-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--accent);
+  transition: width 0.45s ease;
+}
+
+/* Card stage */
+.card-stage {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  animation: fade 0.22s ease;
+}
+.card-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.q {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 6px 0 18px;
+}
+.a {
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 16px;
+  margin-bottom: 12px;
+  animation: fade 0.25s ease;
+}
+.plain {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: rgba(47, 140, 255, 0.06);
+  border: 1px solid rgba(47, 140, 255, 0.24);
+  border-radius: 11px;
+  padding: 13px 16px;
+  margin-bottom: 12px;
+  animation: fade 0.25s ease;
+}
+.plain-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  margin-bottom: 5px;
+}
+
+/* Watch + visual guide links */
+.watch {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.watch a,
+.watch button.linklike {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--accent-deep);
+  text-decoration: none;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 13px;
+  cursor: pointer;
+}
+.watch a:hover,
+.watch button.linklike:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Pre-reveal confidence tap (metacognitive calibration) */
+.confidence-row {
+  margin-top: auto;
+}
+.confidence-label {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.conf-btns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.conf-btn {
+  appearance: none;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 9px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.conf-btn:hover {
+  color: var(--ink);
+  border-color: #d9d0bb;
+}
+.conf-btn.active {
+  color: var(--accent-deep);
+  border-color: var(--accent);
+  background: rgba(47, 140, 255, 0.08);
+}
+
+.reveal-hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 14px;
+}
+
+/* Grade row */
+.grade-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: auto;
+}
+@media (max-width: 560px) {
+  .grade-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.grade-row .btn {
+  position: relative;
+  flex-direction: column;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 6px;
+}
+.grade-row .btn b {
+  font-size: 15px;
+}
+.grade-row .btn .ivl {
+  font-size: 11.5px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.grade-row .btn .gkey {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.45;
+  font-family: inherit;
+}
+.grade-row.single {
+  grid-template-columns: 1fr;
+}
+
+/* Empty / all-done state */
+.empty-state {
+  text-align: center;
+  padding: 44px 16px;
+  animation: fade 0.22s ease;
+}
+.empty-state .big {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+.empty-state h3 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+.empty-state p {
+  color: var(--muted);
+  margin: 0 auto 14px;
+  max-width: 460px;
+  line-height: 1.55;
+}
+.empty-state .done-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Calibration readout after a session */
+.calib-note {
+  margin: 14px auto 0;
+  max-width: 460px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 12px 14px;
+}
+.calib-note b {
+  color: var(--accent-deep);
+}

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="rag">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Retrieve, then generate</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* rag-only styles */
+  #rag-pipe {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  #rag-pipe .rag-q {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rag-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .rag-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+  .rag-row.is-dim {
+    opacity: 0.5;
+  }
+  .rag-rank {
+    flex: 0 0 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .rag-row.is-top .rag-rank {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    color: #fff;
+  }
+  .rag-meta {
+    flex: 0 0 138px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .rag-meta b {
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--ink);
+    line-height: 1.15;
+  }
+  .rag-meta span {
+    font-size: 10.5px;
+    color: var(--muted);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rag-track {
+    position: relative;
+    flex: 1;
+    min-width: 60px;
+    height: 16px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .rag-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background: var(--accent);
+    opacity: 0.35;
+    border-radius: 4px 0 0 4px;
+    transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .rag-row.is-top .rag-bar {
+    background: var(--accent2);
+    opacity: 1;
+  }
+  .rag-score {
+    flex: 0 0 38px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .rag-row.is-top .rag-score {
+    color: var(--accent2);
+  }
+  .rag-cut {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 5px 0 5px 32px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent2);
+  }
+  .rag-cut::before,
+  .rag-cut::after {
+    content: "";
+    height: 1px;
+    background: var(--accent);
+    flex: 1;
+    opacity: 0.5;
+  }
+  #rag-answer {
+    margin-top: 14px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 12px 14px;
+  }
+  #rag-answer .a-lab {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+  #rag-answer .a-text {
+    font-size: 13.5px;
+    color: var(--ink);
+    line-height: 1.45;
+    margin: 0 0 8px;
+  }
+  #rag-note {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+    margin: 8px 0 0;
+  }
+  #rag-note b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Retrieval-Augmented Generation</p>
+    <h1 class="dg-title">Retrieve, then generate</h1>
+  </div>
+  <p class="dg-caption">
+    Pick a question. The retriever scores every stored chunk for relevance, the
+    top few cross the line into the prompt, and the answer cites the one it used.
+    The model is never retrained.
+  </p>
+
+  <div class="dg-controls" role="group" aria-label="Choose a question to ask">
+    <span class="dg-label"><b>Ask:</b></span>
+    <button class="dg-btn is-active" type="button" data-q="0" aria-pressed="true">How much time off?</button>
+    <button class="dg-btn" type="button" data-q="1" aria-pressed="false">Error X7-42B?</button>
+    <button class="dg-btn" type="button" data-q="2" aria-pressed="false">Work from home?</button>
+  </div>
+
+  <div class="dg-stage">
+    <div id="rag-pipe" aria-hidden="true">
+      <span class="dg-chip rag-q" id="rag-qchip">how much time off do I get</span>
+      <span class="dg-wire" style="flex:0 0 16px"></span>
+      <span class="dg-chip is-mono">embed &rarr; vector</span>
+      <span class="dg-wire" style="flex:0 0 16px"></span>
+      <span class="dg-chip">nearest-neighbor search</span>
+    </div>
+
+    <p class="dg-rowlabel">Chunk store: relevance to your question</p>
+    <div class="rag-rows" id="rag-rows" aria-live="polite"></div>
+
+    <div id="rag-answer">
+      <p class="a-lab">Top chunks pasted into the prompt, then the grounded answer</p>
+      <p class="a-text" id="rag-answer-text"></p>
+      <span class="dg-chip is-gold" id="rag-cite"></span>
+      <p id="rag-note"></p>
+    </div>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--accent2)"></i> retrieved (above the top-k line)</span>
+    <span><i class="dg-swatch" style="background:var(--accent);opacity:0.35"></i> scored but left out</span>
+    <span><i class="dg-swatch is-dot" style="background:#fff;border:1px solid var(--gold)"></i> the citation</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var TOPK = 3;
+
+  var CHUNKS = {
+    c1: { title: 'Vacation & PTO', snip: '15 paid days off each year' },
+    c2: { title: 'Parental leave', snip: '12 weeks paid for new parents' },
+    c3: { title: 'Remote work', snip: 'Two in-office days each week' },
+    c4: { title: 'Expense policy', snip: 'Meals over $75 need a receipt' },
+    c5: { title: 'Error code list', snip: 'X7-42B = upload checksum failed' }
+  };
+
+  var QUERIES = [
+    {
+      q: 'how much time off do I get',
+      scores: { c1: 0.92, c2: 0.55, c3: 0.34, c4: 0.14, c5: 0.08 },
+      answer: 'You accrue 15 paid days off per year.',
+      cite: 'c1',
+      note: '“Time off” shares no words with “Vacation & PTO,” yet it ranked first: that is <b>meaning-based (semantic) matching</b>.'
+    },
+    {
+      q: 'what does error X7-42B mean',
+      scores: { c5: 0.95, c4: 0.22, c3: 0.18, c1: 0.12, c2: 0.09 },
+      answer: 'X7-42B means an upload checksum failed.',
+      cite: 'c5',
+      note: 'An exact code like X7-42B is matched on the literal string: the one case where <b>keyword search</b> beats pure semantic search.'
+    },
+    {
+      q: 'can I work from home',
+      scores: { c3: 0.90, c1: 0.40, c2: 0.33, c4: 0.15, c5: 0.07 },
+      answer: 'You may work remotely, but two in-office days are required each week.',
+      cite: 'c3',
+      note: 'The chunks just below the line are near in meaning but are not the answer, so <b>top-k</b> leaves them out.'
+    }
+  ];
+
+  var rowsEl = root.querySelector('#rag-rows');
+  var qChip = root.querySelector('#rag-qchip');
+  var answerText = root.querySelector('#rag-answer-text');
+  var citeChip = root.querySelector('#rag-cite');
+  var noteEl = root.querySelector('#rag-note');
+  var btns = Array.prototype.slice.call(root.querySelectorAll('[data-q]'));
+
+  function makeRow(rank, id, score, isTop) {
+    var ch = CHUNKS[id];
+    var row = document.createElement('div');
+    row.className = 'rag-row' + (isTop ? ' is-top' : ' is-dim');
+
+    var rk = document.createElement('div');
+    rk.className = 'rag-rank';
+    rk.textContent = rank;
+
+    var meta = document.createElement('div');
+    meta.className = 'rag-meta';
+    var b = document.createElement('b');
+    b.textContent = ch.title;
+    var s = document.createElement('span');
+    s.textContent = ch.snip;
+    meta.appendChild(b);
+    meta.appendChild(s);
+
+    var track = document.createElement('div');
+    track.className = 'rag-track';
+    var bar = document.createElement('div');
+    bar.className = 'rag-bar';
+    track.appendChild(bar);
+    // animate from 0 to width on next frame
+    requestAnimationFrame(function () {
+      bar.style.width = Math.round(score * 100) + '%';
+    });
+
+    var sc = document.createElement('div');
+    sc.className = 'rag-score';
+    sc.textContent = score.toFixed(2);
+
+    row.appendChild(rk);
+    row.appendChild(meta);
+    row.appendChild(track);
+    row.appendChild(sc);
+    return row;
+  }
+
+  function render(qi) {
+    var Q = QUERIES[qi];
+    // sort chunk ids by score, descending (nearest-neighbor ranking)
+    var ids = Object.keys(Q.scores).sort(function (a, b) {
+      return Q.scores[b] - Q.scores[a];
+    });
+
+    rowsEl.innerHTML = '';
+    ids.forEach(function (id, k) {
+      rowsEl.appendChild(makeRow(k + 1, id, Q.scores[id], k < TOPK));
+      if (k === TOPK - 1) {
+        var cut = document.createElement('div');
+        cut.className = 'rag-cut';
+        cut.textContent = 'top-k = ' + TOPK + ', pasted into the prompt';
+        rowsEl.appendChild(cut);
+      }
+    });
+
+    qChip.textContent = Q.q;
+    answerText.textContent = Q.answer;
+    citeChip.textContent = 'cites: ' + CHUNKS[Q.cite].title;
+    noteEl.innerHTML = Q.note;
+
+    btns.forEach(function (b, k) {
+      var on = k === qi;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      render(parseInt(b.getAttribute('data-q'), 10));
+    });
+  });
+
+  render(0);
+})();
+</script>
+</body>
+</html>

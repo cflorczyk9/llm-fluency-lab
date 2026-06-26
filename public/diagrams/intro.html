@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="intro">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What an LLM is</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* intro-only: the three-stage pipeline and its reveal panel */
+  #intro-flow .dg-node {
+    flex: 1 1 150px;
+    cursor: pointer;
+    appearance: none;
+    text-align: left;
+    font-family: inherit;
+  }
+  #intro-flow .dg-node .step-no {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent2);
+  }
+  #intro-reveal {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 13px 15px;
+    min-height: 64px;
+  }
+  #intro-reveal .r-title {
+    font-size: 13.5px;
+    font-weight: 650;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+  #intro-reveal .r-body {
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 0;
+  }
+  #intro-reveal .r-body b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  /* the payoff: the one myth to drop, stated plainly and always visible */
+  #intro-payoff {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  #intro-payoff .pay-vs {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  #intro-payoff .dg-chip {
+    transition: box-shadow 0.18s ease;
+  }
+  #intro-payoff.is-landed #intro-reality {
+    box-shadow: 0 0 0 1px var(--accent), 0 2px 10px rgba(28, 29, 31, 0.1);
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">What an LLM is</p>
+    <h1 class="dg-title">A trained next-word predictor</h1>
+  </div>
+  <p class="dg-caption">
+    A large language model is not a lookup table or a database. It is one huge
+    pattern, learned from text, that predicts the next piece, then repeats. Click
+    a stage to see what happens there.
+  </p>
+
+  <div class="dg-stage">
+    <div class="dg-flow" id="intro-flow">
+      <button class="dg-node is-interactive is-active" data-stage="0" type="button"
+        aria-label="Stage 1: read a lot of text">
+        <span class="step-no">Stage 1</span>
+        <span class="dg-node-title">Read a lot of text</span>
+        <span class="dg-node-sub">books, code, the web</span>
+      </button>
+      <span class="dg-wire" aria-hidden="true"></span>
+      <button class="dg-node is-interactive" data-stage="1" type="button"
+        aria-label="Stage 2: learn one giant pattern">
+        <span class="step-no">Stage 2</span>
+        <span class="dg-node-title">Learn one pattern</span>
+        <span class="dg-node-sub">billions of weights</span>
+      </button>
+      <span class="dg-wire" aria-hidden="true"></span>
+      <button class="dg-node is-interactive" data-stage="2" type="button"
+        aria-label="Stage 3: predict the next token">
+        <span class="step-no">Stage 3</span>
+        <span class="dg-node-title">Predict next token</span>
+        <span class="dg-node-sub">one piece at a time</span>
+      </button>
+    </div>
+
+    <div style="height:12px"></div>
+    <div id="intro-reveal" aria-live="polite">
+      <p class="r-title"></p>
+      <p class="r-body"></p>
+    </div>
+  </div>
+
+  <div id="intro-payoff" aria-label="The one idea to keep">
+    <span class="dg-chip is-gold">Myth: it looks the answer up</span>
+    <span class="pay-vs" aria-hidden="true">vs</span>
+    <span class="dg-chip is-accent" id="intro-reality">Reality: it predicts the next piece</span>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--accent)"></i> the stage you are reading</span>
+    <span><i class="dg-swatch is-dot" style="background:var(--gold)"></i> the myth to drop</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var reduce = false;
+  try {
+    reduce = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {}
+
+  var STAGES = [
+    {
+      title: 'Read a lot of text',
+      body: 'The model is shown enormous amounts of writing. It is never told the rules of grammar or any facts directly: it only ever sees text and tries to continue it.'
+    },
+    {
+      title: 'Learn one giant pattern',
+      body: 'Every guess that is wrong nudges billions of internal numbers (weights) a little. After enough text, that single pattern captures grammar, facts, and style all at once.'
+    },
+    {
+      title: 'Predict the next token',
+      body: 'When you chat, it is still just predicting: it scores every possible next piece and picks one, then repeats. <b>It has no lookup table, so its answers can be fluent and still wrong.</b>'
+    }
+  ];
+
+  var nodes = Array.prototype.slice.call(
+    root.querySelectorAll('#intro-flow .dg-node'),
+  );
+  var wires = Array.prototype.slice.call(
+    root.querySelectorAll('#intro-flow .dg-wire'),
+  );
+  var rTitle = root.querySelector('#intro-reveal .r-title');
+  var rBody = root.querySelector('#intro-reveal .r-body');
+  var payoff = root.querySelector('#intro-payoff');
+
+  var cur = -1;
+  var cycleTimer = null;
+
+  function show(i, fromUser) {
+    cur = i;
+    nodes.forEach(function (n, k) {
+      n.classList.toggle('is-active', k === i);
+    });
+    wires.forEach(function (w, k) {
+      w.classList.toggle('is-active', k < i);
+    });
+    rTitle.textContent = STAGES[i].title;
+    rBody.innerHTML = STAGES[i].body;
+    // the payoff lands on the predict stage: emphasize "Reality"
+    if (payoff) payoff.classList.toggle('is-landed', i === 2);
+    if (fromUser) stopCycle();
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  function stopCycle() {
+    if (cycleTimer) {
+      clearInterval(cycleTimer);
+      cycleTimer = null;
+    }
+  }
+
+  nodes.forEach(function (n) {
+    n.addEventListener('click', function () {
+      show(parseInt(n.getAttribute('data-stage'), 10), true);
+    });
+  });
+
+  show(0, false);
+  if (!reduce) {
+    cycleTimer = setInterval(function () {
+      show((cur + 1) % STAGES.length, false);
+    }, 3200);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="prompting">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Anatomy of a prompt</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* prompting-only: the toggle blocks, the assembled-prompt preview, the meter */
+  .pp-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  @media (max-width: 600px) {
+    .pp-grid { grid-template-columns: 1fr; }
+  }
+
+  .pp-rows { display: flex; flex-direction: column; gap: 8px; }
+  .pp-row {
+    appearance: none;
+    font-family: inherit;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 9px 11px;
+    transition: border-color 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+  }
+  .pp-row:hover { border-color: var(--accent); }
+  .pp-row[aria-checked="true"] {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .pp-row[aria-checked="false"] {
+    opacity: 0.62;
+    border-style: dashed;
+    background: var(--panel2);
+  }
+  .pp-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .pp-check {
+    flex: 0 0 auto;
+    width: 18px; height: 18px;
+    border-radius: 5px;
+    border: 1.5px solid var(--line);
+    background: var(--panel2);
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    color: #fff; font-size: 12px; font-weight: 800;
+  }
+  .pp-row[aria-checked="true"] .pp-check {
+    background: var(--accent); border-color: var(--accent2);
+  }
+  .pp-main { flex: 1 1 auto; min-width: 0; }
+  .pp-name {
+    font-size: 13px; font-weight: 650; color: var(--ink);
+    display: flex; align-items: baseline; gap: 7px;
+  }
+  .pp-tag {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--accent2);
+  }
+  .pp-carries { font-size: 11px; color: var(--muted); line-height: 1.35; margin-top: 1px; }
+  .pp-w { flex: 0 0 auto; display: inline-flex; gap: 2px; align-items: flex-end; }
+  .pp-w i {
+    width: 4px; border-radius: 1px; background: var(--line); display: inline-block;
+  }
+  .pp-w i.on { background: var(--accent2); }
+  .pp-w i:nth-child(1) { height: 7px; }
+  .pp-w i:nth-child(2) { height: 10px; }
+  .pp-w i:nth-child(3) { height: 13px; }
+  .pp-w i:nth-child(4) { height: 16px; }
+
+  .pp-right { display: flex; flex-direction: column; gap: 11px; }
+  .pp-prevlabel {
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--muted); margin: 0;
+  }
+  .pp-preview {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 11px 12px;
+    min-height: 120px;
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  .pp-line { font-size: 11.5px; line-height: 1.4; }
+  .pp-line .l-tag {
+    font-family: var(--dg-mono);
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--accent2); display: block;
+  }
+  .pp-line .l-text { color: var(--ink); }
+  .pp-line.is-hot { background: rgba(47,140,255,0.08); border-radius: 5px; }
+  .pp-empty { font-size: 12px; color: var(--gap); font-style: italic; }
+
+  .pp-meter-wrap {
+    border-top: 1px solid var(--line); padding-top: 10px;
+  }
+  .pp-meter-head {
+    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;
+  }
+  .pp-meter-head .h-l { font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--muted); }
+  .pp-verdict { font-size: 14px; font-weight: 700; color: var(--accent2); }
+  .pp-consequence { font-size: 11.5px; color: var(--muted); line-height: 1.45; margin: 7px 0 0; }
+  .pp-consequence b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Prompting &amp; in-context learning</p>
+    <h1 class="dg-title">Anatomy of a prompt</h1>
+  </div>
+  <p class="dg-caption">
+    A prompt is built from parts. Toggle each block to see how much it carries:
+    the <b>instruction</b> is load-bearing, the rest refine. The assembled prompt
+    on the right rebuilds, and the answer-quality meter responds.
+  </p>
+
+  <div class="dg-stage">
+    <div class="pp-grid">
+      <!-- LEFT: the toggleable blocks -->
+      <div class="pp-rows" id="pp-rows" role="group" aria-label="Prompt blocks, toggle on or off">
+        <button class="pp-row" type="button" role="switch" aria-checked="true"
+          data-key="role" data-tag="ROLE"
+          data-line="You are a calm, experienced customer-support lead."
+          data-off="Tone and perspective drift to a generic default voice.">
+          <span class="pp-check" aria-hidden="true">&#10003;</span>
+          <span class="pp-main">
+            <span class="pp-name">Role <span class="pp-tag">system</span></span>
+            <span class="pp-carries">Sets tone and viewpoint. A light nudge, not correctness.</span>
+          </span>
+          <span class="pp-w" aria-label="weight: light"><i class="on"></i><i></i><i></i><i></i></span>
+        </button>
+
+        <button class="pp-row" type="button" role="switch" aria-checked="true"
+          data-key="instruction" data-tag="INSTRUCTION"
+          data-line="Draft a reply that apologizes, confirms the refund, and gives next steps."
+          data-off="The model has to guess what you even want done.">
+          <span class="pp-check" aria-hidden="true">&#10003;</span>
+          <span class="pp-main">
+            <span class="pp-name">Instruction <span class="pp-tag">the ask</span></span>
+            <span class="pp-carries">The actual task. Vague here and everything downstream guesses.</span>
+          </span>
+          <span class="pp-w" aria-label="weight: heavy"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+        </button>
+
+        <button class="pp-row" type="button" role="switch" aria-checked="true"
+          data-key="context" data-tag="CONTEXT"
+          data-line='"""I was charged $49 twice this month. Please fix this. - Dana"""'
+          data-off="No source to work from, so the reply is generic or invented.">
+          <span class="pp-check" aria-hidden="true">&#10003;</span>
+          <span class="pp-main">
+            <span class="pp-name">Context <span class="pp-tag">data + delimiters</span></span>
+            <span class="pp-carries">The material to act on, fenced so it is read, not obeyed.</span>
+          </span>
+          <span class="pp-w" aria-label="weight: high"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>
+        </button>
+
+        <button class="pp-row" type="button" role="switch" aria-checked="true"
+          data-key="fewshot" data-tag="EXAMPLE"
+          data-line="Sample reply: Hi NAME, sorry about that. I refunded the duplicate charge today..."
+          data-off="The model guesses the exact shape instead of copying a sample.">
+          <span class="pp-check" aria-hidden="true">&#10003;</span>
+          <span class="pp-main">
+            <span class="pp-name">Few-shot example <span class="pp-tag">show, not tell</span></span>
+            <span class="pp-carries">One worked example, which beats describing the style in words.</span>
+          </span>
+          <span class="pp-w" aria-label="weight: medium"><i class="on"></i><i class="on"></i><i></i><i></i></span>
+        </button>
+
+        <button class="pp-row" type="button" role="switch" aria-checked="true"
+          data-key="format" data-tag="FORMAT"
+          data-line="Format: a subject line, then 3 short sentences, then a sign-off."
+          data-off="You get a wall of prose to clean up by hand.">
+          <span class="pp-check" aria-hidden="true">&#10003;</span>
+          <span class="pp-main">
+            <span class="pp-name">Output format <span class="pp-tag">the shape</span></span>
+            <span class="pp-carries">The structure you want back, so it is ready to use.</span>
+          </span>
+          <span class="pp-w" aria-label="weight: medium"><i class="on"></i><i class="on"></i><i></i><i></i></span>
+        </button>
+      </div>
+
+      <!-- RIGHT: the assembled prompt + quality meter -->
+      <div class="pp-right">
+        <div>
+          <p class="pp-prevlabel">Assembled prompt</p>
+          <div class="pp-preview" id="pp-preview" aria-live="polite"></div>
+        </div>
+        <div class="pp-meter-wrap">
+          <div class="pp-meter-head">
+            <span class="h-l">Answer quality</span>
+            <span class="pp-verdict" id="pp-verdict">Excellent</span>
+          </div>
+          <div class="dg-track"><div class="dg-bar" id="pp-bar"></div></div>
+          <p class="pp-consequence" id="pp-consequence"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--accent2)"></i> taller bar = block carries more weight</span>
+    <span>Turn off the instruction to see the prompt collapse.</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var WEIGHTS = { role: 10, instruction: 40, context: 22, fewshot: 16, format: 12 };
+
+  var rows = Array.prototype.slice.call(root.querySelectorAll('.pp-row'));
+  var preview = root.querySelector('#pp-preview');
+  var bar = root.querySelector('#pp-bar');
+  var verdictEl = root.querySelector('#pp-verdict');
+  var consEl = root.querySelector('#pp-consequence');
+
+  function isOn(r) { return r.getAttribute('aria-checked') === 'true'; }
+
+  function render() {
+    // 1) rebuild the assembled prompt from the enabled blocks
+    preview.innerHTML = '';
+    var anyOn = false;
+    rows.forEach(function (r) {
+      if (!isOn(r)) return;
+      anyOn = true;
+      var line = document.createElement('p');
+      line.className = 'pp-line';
+      line.setAttribute('data-key', r.getAttribute('data-key'));
+      var tag = document.createElement('span');
+      tag.className = 'l-tag';
+      tag.textContent = r.getAttribute('data-tag');
+      var txt = document.createElement('span');
+      txt.className = 'l-text';
+      txt.textContent = r.getAttribute('data-line');
+      line.appendChild(tag);
+      line.appendChild(txt);
+      preview.appendChild(line);
+    });
+    if (!anyOn) {
+      var empty = document.createElement('p');
+      empty.className = 'pp-empty';
+      empty.textContent = 'Empty prompt: the model has nothing to go on.';
+      preview.appendChild(empty);
+    }
+
+    // 2) quality readout: sum the weights of enabled blocks
+    var instrOn = isOn(rows.filter(function (r) {
+      return r.getAttribute('data-key') === 'instruction';
+    })[0]);
+    var score = 0;
+    rows.forEach(function (r) {
+      if (isOn(r)) score += WEIGHTS[r.getAttribute('data-key')] || 0;
+    });
+
+    var verdict, cons, bad = false;
+    if (!instrOn) {
+      // no task stated: the prompt is broken regardless of the trimmings
+      score = Math.min(score, 14);
+      verdict = 'Broken';
+      cons = 'No instruction, so the model must <b>guess what you even want done.</b> The other blocks cannot save a prompt with no task.';
+      bad = true;
+    } else if (score >= 92) {
+      verdict = 'Excellent';
+      cons = 'Specific, grounded, and shaped: little is left to chance.';
+    } else if (score >= 74) {
+      verdict = 'Strong';
+      cons = nameMissing('Solid. Adding back the missing block would tighten it: ');
+    } else if (score >= 52) {
+      verdict = 'Usable';
+      cons = nameMissing('On-task but a bit generic: ');
+    } else {
+      verdict = 'Vague';
+      cons = nameMissing('Thin: the model is filling a lot of gaps. ');
+    }
+
+    bar.style.width = score + '%';
+    bar.style.background = bad ? 'var(--gap)' : (score >= 92 ? 'var(--accent)' : 'var(--accent2)');
+    verdictEl.textContent = verdict;
+    verdictEl.style.color = bad ? 'var(--gap)' : 'var(--accent2)';
+    consEl.innerHTML = cons;
+
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  // pick the heaviest disabled (non-instruction) block to name the biggest gap
+  function nameMissing(prefix) {
+    var off = rows.filter(function (r) {
+      return !isOn(r) && r.getAttribute('data-key') !== 'instruction';
+    });
+    if (!off.length) return prefix.replace(/: $/, '.');
+    off.sort(function (a, b) {
+      return (WEIGHTS[b.getAttribute('data-key')] || 0) - (WEIGHTS[a.getAttribute('data-key')] || 0);
+    });
+    return prefix + '<b>' + off[0].getAttribute('data-off') + '</b>';
+  }
+
+  rows.forEach(function (r) {
+    r.addEventListener('click', function () {
+      r.setAttribute('aria-checked', isOn(r) ? 'false' : 'true');
+      render();
+    });
+    // hover/focus a block to spotlight its line in the assembled prompt
+    function hot(on) {
+      var k = r.getAttribute('data-key');
+      var line = preview.querySelector('.pp-line[data-key="' + k + '"]');
+      if (line) line.classList.toggle('is-hot', on);
+    }
+    r.addEventListener('mouseenter', function () { hot(true); });
+    r.addEventListener('mouseleave', function () { hot(false); });
+    r.addEventListener('focus', function () { hot(true); });
+    r.addEventListener('blur', function () { hot(false); });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

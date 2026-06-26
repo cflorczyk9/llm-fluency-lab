@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="inference">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inference and decoding</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* sampling-only: the next-token probability viz, ported from the guide */
+  #sec-sampling{
+    width:100%;box-sizing:border-box;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px 22px;color:var(--ink);box-shadow:var(--dg-shadow);
+    font-family:var(--dg-sans);
+  }
+  #sec-sampling *{box-sizing:border-box;}
+
+  /* sentence row */
+  #sec-sampling .stage{
+    background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin-bottom:18px;
+  }
+  #sec-sampling .sentence{
+    font-size:22px;line-height:1.5;font-weight:500;letter-spacing:.2px;color:var(--ink);
+    display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 10px;min-height:34px;
+  }
+  #sec-sampling .word{display:inline-block;}
+  #sec-sampling .word.fresh{animation:sx-pop .42s cubic-bezier(.2,.9,.25,1.2) both;}
+  @keyframes sx-pop{
+    0%{opacity:0;transform:translateY(10px) scale(.85);color:var(--accent);}
+    60%{color:var(--accent);}
+    100%{opacity:1;transform:none;color:var(--ink);}
+  }
+  #sec-sampling .blank{
+    display:inline-block;min-width:84px;border-bottom:3px solid var(--accent);
+    color:var(--accent);text-align:center;position:relative;
+  }
+  #sec-sampling .blank.pulse{animation:sx-blink 1.1s ease-in-out infinite;}
+  @keyframes sx-blink{0%,100%{opacity:1}50%{opacity:.4}}
+  #sec-sampling .done-tag{
+    color:var(--accent2);font-size:14px;font-weight:600;margin-left:6px;
+    opacity:0;transition:opacity .4s ease;
+  }
+  #sec-sampling .done-tag.show{opacity:1;}
+
+  /* chart */
+  #sec-sampling .chartwrap{margin-bottom:6px;}
+  #sec-sampling .chart-title{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1.2px;
+    margin-bottom:13px;
+  }
+  #sec-sampling .chart-title b{color:var(--ink);font-weight:600;text-transform:none;letter-spacing:.2px;font-size:13px;}
+  #sec-sampling .bars{display:flex;flex-direction:column;gap:9px;}
+  #sec-sampling .row{display:flex;align-items:center;gap:12px;transition:opacity .2s ease;}
+  #sec-sampling .tok{
+    width:104px;text-align:right;font-size:15px;color:var(--ink);font-weight:500;
+    font-variant-numeric:tabular-nums;flex:0 0 104px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  #sec-sampling .track{
+    position:relative;flex:1;height:26px;background:var(--panel2);
+    border:1px solid var(--line);border-radius:7px;overflow:hidden;
+  }
+  #sec-sampling .bar{
+    position:absolute;left:0;top:0;bottom:0;width:0%;
+    background:var(--accent2);border-radius:6px 0 0 6px;
+  }
+  #sec-sampling .row.top .bar{background:var(--accent);}
+  #sec-sampling .row.chosen .bar{
+    background:var(--accent);
+    box-shadow:inset 0 0 0 2px var(--accent2);
+  }
+  #sec-sampling .row.chosen .track{box-shadow:0 0 0 2px var(--accent);}
+  #sec-sampling .row.dim{opacity:.4;}
+  #sec-sampling .pct{
+    width:52px;text-align:right;font-size:14px;color:var(--muted);font-weight:500;
+    font-variant-numeric:tabular-nums;flex:0 0 52px;
+  }
+  #sec-sampling .row.top .pct{color:var(--accent2);font-weight:600;}
+  #sec-sampling .row.chosen .pct{color:var(--accent2);font-weight:700;}
+
+  /* badge that rides on the chosen row */
+  #sec-sampling .pick-badge{
+    margin-left:8px;font-size:11px;font-weight:600;color:var(--panel);
+    background:var(--accent2);border-radius:20px;padding:2px 9px;
+    white-space:nowrap;opacity:0;transform:translateX(-4px);
+    transition:opacity .25s ease,transform .25s ease;flex:0 0 auto;
+  }
+  #sec-sampling .row.chosen .pick-badge{opacity:1;transform:none;}
+
+  /* controls */
+  #sec-sampling .controls{
+    margin-top:22px;display:flex;flex-wrap:wrap;align-items:flex-end;
+    gap:18px 26px;
+  }
+  #sec-sampling .temp{flex:1 1 300px;min-width:260px;}
+  #sec-sampling .temp .lab{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13px;color:var(--muted);margin-bottom:9px;
+  }
+  #sec-sampling .temp .lab b{color:var(--accent2);font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;}
+  #sec-sampling input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;
+    background:linear-gradient(90deg,var(--accent),var(--gold));outline:none;cursor:pointer;
+  }
+  #sec-sampling input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;
+    background:var(--accent);border:3px solid var(--panel);
+    box-shadow:0 0 0 1.5px var(--accent2),0 1px 4px rgba(28,29,31,.25);cursor:pointer;
+  }
+  #sec-sampling input[type=range]::-moz-range-thumb{
+    width:20px;height:20px;border-radius:50%;background:var(--accent);
+    border:3px solid var(--panel);box-shadow:0 0 0 1.5px var(--accent2);cursor:pointer;
+  }
+  #sec-sampling input[type=range]:focus-visible{box-shadow:0 0 0 2px var(--accent);}
+  #sec-sampling .scale{
+    display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px;
+  }
+  #sec-sampling .scale span:first-child{color:var(--accent2);}
+  #sec-sampling .scale span:last-child{color:var(--gold);}
+  #sec-sampling .btns{display:flex;gap:12px;flex:0 0 auto;}
+  #sec-sampling button{
+    font-family:inherit;font-size:14.5px;font-weight:600;color:var(--ink);
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:11px 20px;cursor:pointer;transition:transform .12s ease,background .15s ease,border-color .15s ease,box-shadow .15s ease;
+  }
+  #sec-sampling button:hover{background:var(--panel2);border-color:var(--accent2);}
+  #sec-sampling button:active{transform:translateY(1px);}
+  #sec-sampling button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  #sec-sampling button.primary{background:var(--accent);border-color:var(--accent);color:#ffffff;}
+  #sec-sampling button.primary:hover{background:var(--accent2);border-color:var(--accent2);}
+  #sec-sampling button:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
+  #sec-sampling .note{
+    margin-top:18px;font-size:12.5px;color:var(--muted);line-height:1.55;
+    border-top:1px solid var(--line);padding-top:13px;
+  }
+  #sec-sampling .note .k{color:var(--accent);font-weight:600;}
+  #sec-sampling .note .g{color:var(--accent2);font-weight:600;}
+
+  @media (max-width:560px){
+    #sec-sampling .tok{width:82px;flex-basis:82px;font-size:13.5px;}
+    #sec-sampling .sentence{font-size:20px;}
+    #sec-sampling .controls{gap:16px;}
+    #sec-sampling .btns{width:100%;}
+    #sec-sampling .btns button{flex:1;}
+    #sec-sampling .pick-badge{display:none;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #sec-sampling .word.fresh{animation:none;}
+    #sec-sampling .blank.pulse{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Inference and decoding</p>
+    <h1 class="dg-title">How a model picks the next word</h1>
+  </div>
+  <p class="dg-caption">
+    The model scores every candidate next word, turns the scores into probabilities, then draws one at random.
+    <b>Temperature</b> dials how much the favorite dominates: low is predictable, high is creative.
+  </p>
+
+  <section id="sec-sampling">
+    <div class="stage">
+      <div class="sentence" id="sx-sentence"></div>
+    </div>
+
+    <div class="chartwrap">
+      <div class="chart-title">
+        <span>Candidate next tokens</span>
+        <b id="sx-chart-label">probability at this temperature</b>
+      </div>
+      <div class="bars" id="sx-bars"></div>
+    </div>
+
+    <div class="controls">
+      <div class="temp">
+        <div class="lab"><span>Temperature</span><b id="sx-temp-val">0.80</b></div>
+        <input id="sx-temp" type="range" min="0" max="1.5" step="0.01" value="0.8" aria-label="Temperature">
+        <div class="scale"><span>0.0 &middot; predictable</span><span>0.8</span><span>1.5 &middot; creative</span></div>
+      </div>
+      <div class="btns">
+        <button class="primary" id="sx-sample" aria-label="Sample one word from the current probabilities">Sample a word</button>
+        <button id="sx-reset" aria-label="Reset the sentence">Reset</button>
+      </div>
+    </div>
+
+    <div class="note">
+      The <span class="k">bright blue</span> bar is the model's current favorite. <span class="g">Sample</span> takes one weighted-random draw from these probabilities (it does not always pick the favorite), appends the winning token to the sentence, then shows a fresh distribution for the next blank.
+    </div>
+  </section>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  function init(){
+    var root = document.getElementById('sec-sampling');
+    if(!root) return;
+
+    var reduceMotion = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function bump(){ if(window.reportDiagramHeight) window.reportDiagramHeight(); }
+
+    // ---- data: a believable chain of next-token distributions ----
+    // Each step gives an authored base distribution. Temperature is applied as a
+    // proper softmax over logits (logit = ln(p)); at T=1 the base probs are
+    // reproduced exactly, T->0 concentrates on the max, large T flattens.
+    var CHAIN = [
+      { cands:[ // The cat sat on the ___
+        {w:"mat",p:0.41},{w:"floor",p:0.22},{w:"rug",p:0.14},
+        {w:"couch",p:0.11},{w:"windowsill",p:0.07},{w:"step",p:0.05}
+      ]},
+      { cands:[
+        {w:"and",p:0.38},{w:"by",p:0.21},{w:"near",p:0.15},
+        {w:"while",p:0.13},{w:"as",p:0.08},{w:"then",p:0.05}
+      ]},
+      { cands:[
+        {w:"watched",p:0.34},{w:"stared",p:0.22},{w:"waited",p:0.18},
+        {w:"blinked",p:0.12},{w:"yawned",p:0.09},{w:"purred",p:0.05}
+      ]},
+      { cands:[
+        {w:"the",p:0.45},{w:"a",p:0.24},{w:"its",p:0.13},
+        {w:"every",p:0.10},{w:"that",p:0.05},{w:"some",p:0.03}
+      ]},
+      { cands:[
+        {w:"quiet",p:0.30},{w:"empty",p:0.24},{w:"sunlit",p:0.19},
+        {w:"dusty",p:0.13},{w:"warm",p:0.09},{w:"distant",p:0.05}
+      ]},
+      { cands:[
+        {w:"room.",p:0.40},{w:"street.",p:0.22},{w:"garden.",p:0.16},
+        {w:"hallway.",p:0.12},{w:"world.",p:0.07},{w:"yard.",p:0.03}
+      ]}
+    ];
+    var BASE_WORDS = ["The","cat","sat","on","the"];
+    var MAX_STEPS = CHAIN.length;
+
+    // ---- state ----
+    var committed = [];
+    var stepIndex = 0;
+    var temperature = 0.8;
+    var busy = false;
+    var current = [];
+
+    // ---- DOM refs ----
+    var elSentence = document.getElementById('sx-sentence');
+    var elBars     = document.getElementById('sx-bars');
+    var elTemp     = document.getElementById('sx-temp');
+    var elTempVal  = document.getElementById('sx-temp-val');
+    var elSample   = document.getElementById('sx-sample');
+    var elReset    = document.getElementById('sx-reset');
+    var elChartLab = document.getElementById('sx-chart-label');
+
+    // ---- math: softmax over logits with temperature ----
+    // p_i(T) = softmax(ln(p_i) / T). T->0 = argmax (one-hot), T large = uniform.
+    function applyTemperature(cands, T){
+      var n = cands.length, i;
+      var logits = new Array(n);
+      for(i=0;i<n;i++){ logits[i] = Math.log(Math.max(cands[i].p, 1e-9)); }
+      if(T <= 0.001){
+        var maxI = 0;
+        for(i=1;i<n;i++){ if(logits[i] > logits[maxI]) maxI = i; }
+        return cands.map(function(c,idx){ return {w:c.w, p: idx===maxI ? 1 : 0}; });
+      }
+      var scaled = new Array(n), maxS = -Infinity;
+      for(i=0;i<n;i++){ scaled[i] = logits[i] / T; if(scaled[i] > maxS) maxS = scaled[i]; }
+      var exps = new Array(n), sum = 0;
+      for(i=0;i<n;i++){ exps[i] = Math.exp(scaled[i] - maxS); sum += exps[i]; }
+      return cands.map(function(c,idx){ return {w:c.w, p: exps[idx] / sum}; });
+    }
+
+    function recompute(){
+      var step = CHAIN[stepIndex];
+      current = step ? applyTemperature(step.cands, temperature) : [];
+    }
+
+    function topIndex(list){
+      var mi = 0;
+      for(var i=1;i<list.length;i++){ if(list[i].p > list[mi].p) mi = i; }
+      return mi;
+    }
+
+    // ---- render sentence ----
+    function renderSentence(freshIndex){
+      elSentence.innerHTML = "";
+      var all = BASE_WORDS.concat(committed);
+      all.forEach(function(w, idx){
+        var span = document.createElement('span');
+        span.className = 'word' + (freshIndex === idx ? ' fresh' : '');
+        span.textContent = w;
+        elSentence.appendChild(span);
+      });
+      if(stepIndex < MAX_STEPS){
+        var blank = document.createElement('span');
+        blank.className = 'blank pulse';
+        blank.id = 'sx-blank';
+        blank.innerHTML = '&nbsp;';
+        elSentence.appendChild(blank);
+      } else {
+        var tag = document.createElement('span');
+        tag.className = 'done-tag show';
+        tag.textContent = 'sentence complete';
+        elSentence.appendChild(tag);
+      }
+    }
+
+    // ---- build bar rows ----
+    function buildBars(){
+      elBars.innerHTML = "";
+      if(!current.length){
+        var msg = document.createElement('div');
+        msg.style.color = 'var(--muted)';
+        msg.style.fontSize = '14px';
+        msg.style.padding = '8px 0';
+        msg.textContent = 'No more candidates. The sentence is finished. Press Reset to start again.';
+        elBars.appendChild(msg);
+        return;
+      }
+      var ti = topIndex(current);
+      current.forEach(function(c, idx){
+        var row = document.createElement('div');
+        row.className = 'row' + (idx===ti ? ' top' : '');
+        row.dataset.idx = idx;
+
+        var tok = document.createElement('div');
+        tok.className = 'tok';
+        tok.textContent = c.w;
+
+        var track = document.createElement('div');
+        track.className = 'track';
+        var bar = document.createElement('div');
+        bar.className = 'bar';
+        track.appendChild(bar);
+
+        var pct = document.createElement('div');
+        pct.className = 'pct';
+        pct.textContent = Math.round(c.p*100) + '%';
+
+        var badge = document.createElement('div');
+        badge.className = 'pick-badge';
+        badge.textContent = 'chosen';
+
+        row.appendChild(tok);
+        row.appendChild(track);
+        row.appendChild(pct);
+        row.appendChild(badge);
+        elBars.appendChild(row);
+      });
+      animateBarsTo(current);
+    }
+
+    // ---- smoothly animate bar widths + pct text to match `list` ----
+    var animTokens = {};
+    function animateBarsTo(list){
+      var rows = elBars.querySelectorAll('.row');
+      var ti = topIndex(list);
+      rows.forEach(function(row){
+        var idx = parseInt(row.dataset.idx,10);
+        var target = list[idx] ? list[idx].p : 0;
+        var bar = row.querySelector('.bar');
+        var pct = row.querySelector('.pct');
+        var startW = parseFloat(bar.style.width) || 0;
+        var targetW = target*100;
+
+        if(!row.classList.contains('chosen')){
+          row.classList.toggle('top', idx===ti);
+        }
+
+        if(reduceMotion){
+          bar.style.width = targetW.toFixed(2) + '%';
+          pct.textContent = Math.round(target*100) + '%';
+          return;
+        }
+
+        if(animTokens[idx]) cancelAnimationFrame(animTokens[idx]);
+        var startT = null, dur = 320;
+        function frame(t){
+          if(startT===null) startT = t;
+          var k = Math.min(1,(t-startT)/dur);
+          var e = 1 - Math.pow(1-k,3); // easeOutCubic
+          var w = startW + (targetW-startW)*e;
+          bar.style.width = w.toFixed(2) + '%';
+          pct.textContent = Math.round(startW + (targetW-startW)*e) + '%';
+          if(k<1){ animTokens[idx] = requestAnimationFrame(frame); }
+          else { bar.style.width = targetW.toFixed(2)+'%'; pct.textContent = Math.round(targetW) + '%'; }
+        }
+        animTokens[idx] = requestAnimationFrame(frame);
+      });
+    }
+
+    // ---- temperature slider ----
+    function onTemp(){
+      temperature = parseFloat(elTemp.value);
+      elTempVal.textContent = temperature.toFixed(2);
+      recompute();
+      if(busy) return;
+      animateBarsTo(current);
+    }
+
+    // ---- weighted-random draw consistent with displayed probabilities ----
+    function weightedPick(list){
+      var total = 0, i;
+      for(i=0;i<list.length;i++){ total += list[i].p; }
+      var r = Math.random() * total, acc = 0;
+      for(i=0;i<list.length;i++){
+        acc += list[i].p;
+        if(r <= acc) return i;
+      }
+      return list.length-1;
+    }
+
+    // ---- sample: dim the field, reveal the winning row, then commit ----
+    function doSample(){
+      if(busy || stepIndex >= MAX_STEPS) return;
+      busy = true;
+      elSample.disabled = true;
+      elTemp.disabled = true;
+
+      var list = current.slice();
+      var chosen = weightedPick(list);
+      var rows = Array.prototype.slice.call(elBars.querySelectorAll('.row'));
+
+      if(reduceMotion){
+        rows.forEach(function(r,i){
+          r.classList.remove('top');
+          if(i===chosen) r.classList.add('chosen'); else r.classList.add('dim');
+        });
+        finishSample(chosen, list);
+        return;
+      }
+
+      // Highlight the drawn token: fade the rest, mark the winner.
+      rows.forEach(function(r,i){
+        r.classList.remove('top');
+        if(i===chosen){ r.classList.add('chosen'); }
+        else { r.classList.add('dim'); }
+      });
+
+      setTimeout(function(){ finishSample(chosen, list); }, 780);
+    }
+
+    function finishSample(chosen, list){
+      var word = list[chosen].w;
+      committed.push(word);
+      stepIndex++;
+      var freshIdx = BASE_WORDS.length + committed.length - 1;
+
+      renderSentence(freshIdx);
+      recompute();
+      bump();
+
+      var delay = reduceMotion ? 0 : 420;
+      setTimeout(function(){
+        buildBars();
+        busy = false;
+        elTemp.disabled = false;
+        if(stepIndex >= MAX_STEPS){
+          elSample.disabled = true;
+          elChartLab.textContent = "sentence complete";
+        } else {
+          elSample.disabled = false;
+        }
+        bump();
+      }, delay);
+    }
+
+    // ---- reset ----
+    function doReset(){
+      committed = [];
+      stepIndex = 0;
+      busy = false;
+      for(var key in animTokens){ if(animTokens[key]) cancelAnimationFrame(animTokens[key]); }
+      animTokens = {};
+      elSample.disabled = false;
+      elTemp.disabled = false;
+      elChartLab.textContent = "probability at this temperature";
+      recompute();
+      renderSentence(-1);
+      buildBars();
+      bump();
+    }
+
+    // ---- wire up ----
+    elTemp.addEventListener('input', onTemp);
+    elSample.addEventListener('click', doSample);
+    elReset.addEventListener('click', doReset);
+
+    // init
+    temperature = parseFloat(elTemp.value);
+    elTempVal.textContent = temperature.toFixed(2);
+    doReset();
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

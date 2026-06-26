@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="privacy">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Where your prompt can and cannot travel</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* privacy-only: a data-flow trust map with toggled cut points */
+  .pv-stage { position: relative; }
+  .pv-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr 1.1fr;
+    gap: 14px 26px;
+    align-items: center;
+  }
+  .pv-col {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    min-width: 0;
+  }
+  .pv-col.is-mid { align-items: stretch; }
+  .pv-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* a node in the flow */
+  .pv-node {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 9px 12px;
+    box-shadow: var(--dg-shadow);
+    transition: border-color 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+  }
+  .pv-node .pv-t {
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .pv-node .pv-s {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.35;
+    margin-top: 2px;
+  }
+  .pv-node.is-origin { border-color: var(--ink); }
+  .pv-node.is-provider .pv-t { color: var(--accent2); }
+
+  /* status pill on each destination */
+  .pv-status {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .pv-node.s-live { border-color: var(--accent); }
+  .pv-node.s-live .pv-status { background: var(--accent); color: #fff; }
+  .pv-node.s-blocked { border-color: var(--gap); background: var(--panel); }
+  .pv-node.s-blocked .pv-t { color: var(--gap); text-decoration: line-through; }
+  .pv-node.s-blocked .pv-status { background: #fff; color: var(--gap); border: 1px solid var(--gap); }
+  .pv-node.s-dark { opacity: 0.42; border-style: dashed; }
+  .pv-node.s-dark .pv-status { background: var(--panel2); color: var(--muted); }
+
+  /* local model node */
+  .pv-node.is-local { border-style: dashed; }
+  .pv-node.is-local.s-ghost { opacity: 0.5; }
+  .pv-node.is-local.s-on {
+    opacity: 1;
+    border-style: solid;
+    border-color: var(--accent2);
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+  }
+  .pv-node.is-local.s-on .pv-t { color: var(--accent2); }
+
+  .pv-verdict {
+    margin-top: 12px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 11px 13px;
+  }
+  .pv-verdict .pv-v-head {
+    font-size: 12.5px;
+    font-weight: 650;
+    color: var(--ink);
+    margin: 0 0 7px;
+  }
+  .pv-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; }
+  .pv-chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  .pv-chip.is-reach { border-color: var(--accent); color: var(--accent2); }
+  .pv-chip.is-block { border-color: var(--gap); color: var(--gap); text-decoration: line-through; }
+  .pv-v-note { font-size: 12px; line-height: 1.5; color: var(--muted); margin: 0; }
+  .pv-v-note b { color: var(--ink); font-weight: 600; }
+
+  .pv-ctrl-lab { font-size: 12.5px; font-weight: 600; color: var(--ink); margin-right: 2px; }
+
+  @media (max-width: 560px) {
+    .pv-grid { grid-template-columns: 1fr; gap: 11px; }
+    .pv-col.is-mid { align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Data, Privacy &amp; Compliance</p>
+    <h1 class="dg-title">Where your prompt can and cannot travel</h1>
+  </div>
+  <p class="dg-caption">
+    Your prompt leaves your device and reaches the provider, which can branch it
+    into <b>training</b>, <b>safety logging</b>, and <b>retention</b>. Flip the
+    protections and watch the paths get cut. Only going local stops every flow.
+  </p>
+
+  <div class="dg-controls" role="group" aria-label="Privacy protections">
+    <span class="pv-ctrl-lab">Protections:</span>
+    <button class="dg-btn" type="button" id="pv-notrain" aria-pressed="false">No training</button>
+    <button class="dg-btn" type="button" id="pv-zeroret" aria-pressed="false">Zero retention</button>
+    <button class="dg-btn is-primary-off" type="button" id="pv-onprem" aria-pressed="false">On-prem / local</button>
+  </div>
+
+  <div class="dg-stage pv-stage">
+    <svg class="pv-svg" id="pv-svg" aria-hidden="true">
+      <defs>
+        <marker id="pv-arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5"
+          orient="auto" markerUnits="userSpaceOnUse">
+          <path d="M1,1 L8,4.5 L1,8 Z" fill="var(--accent2)"></path>
+        </marker>
+      </defs>
+    </svg>
+
+    <div class="pv-grid" id="pv-grid">
+      <div class="pv-col is-left">
+        <div class="pv-node is-origin" id="pv-device">
+          <div class="pv-t">Your device</div>
+          <div class="pv-s">your prompt, pasted docs, history</div>
+        </div>
+        <div class="pv-node is-local s-ghost" id="pv-local">
+          <div class="pv-t">Local model</div>
+          <div class="pv-s" id="pv-local-sub">off: an on-prem option</div>
+        </div>
+      </div>
+
+      <div class="pv-col is-mid">
+        <div class="pv-node is-provider" id="pv-provider">
+          <div class="pv-t">Provider servers</div>
+          <div class="pv-s">hosted model API</div>
+        </div>
+      </div>
+
+      <div class="pv-col is-right">
+        <div class="pv-node s-live" id="pv-train">
+          <div class="pv-t">Train future models</div>
+          <div class="pv-s">your words shape a model others use</div>
+          <span class="pv-status">data arrives</span>
+        </div>
+        <div class="pv-node s-live" id="pv-log">
+          <div class="pv-t">Safety logs + review</div>
+          <div class="pv-s" id="pv-log-sub">requests recorded for abuse review</div>
+          <span class="pv-status">data arrives</span>
+        </div>
+        <div class="pv-node s-live" id="pv-retain">
+          <div class="pv-t">Retention store</div>
+          <div class="pv-s">copies kept about 30 days</div>
+          <span class="pv-status">data arrives</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pv-verdict" aria-live="polite">
+    <p class="pv-v-head" id="pv-v-head">Your prompt can reach:</p>
+    <div class="pv-chips" id="pv-chips"></div>
+    <p class="pv-v-note" id="pv-v-note"></p>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch is-line" style="background:var(--accent2)"></i> data flows here</span>
+    <span><i class="dg-swatch is-line" style="background:var(--gap)"></i> you cut this path</span>
+    <span><i class="dg-swatch is-line" style="background:var(--line)"></i> no data reaches it</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var svg = root.querySelector('#pv-svg');
+  var stage = root.querySelector('.pv-stage');
+  var grid = root.querySelector('#pv-grid');
+  var SVGNS = 'http://www.w3.org/2000/svg';
+
+  var nodes = {
+    device:   root.querySelector('#pv-device'),
+    local:    root.querySelector('#pv-local'),
+    provider: root.querySelector('#pv-provider'),
+    train:    root.querySelector('#pv-train'),
+    log:      root.querySelector('#pv-log'),
+    retain:   root.querySelector('#pv-retain')
+  };
+  var localSub = root.querySelector('#pv-local-sub');
+  var logSub = root.querySelector('#pv-log-sub');
+
+  var btn = {
+    noTrain: root.querySelector('#pv-notrain'),
+    zeroRet: root.querySelector('#pv-zeroret'),
+    onPrem:  root.querySelector('#pv-onprem')
+  };
+
+  var vHead = root.querySelector('#pv-v-head');
+  var vChips = root.querySelector('#pv-chips');
+  var vNote = root.querySelector('#pv-v-note');
+
+  var state = { noTrain: false, zeroRet: false, onPrem: false };
+
+  // ---- set the visual state of one destination node ----
+  function setDest(node, status, pillText) {
+    node.classList.remove('s-live', 's-blocked', 's-dark');
+    node.classList.add('s-' + status);
+    var pill = node.querySelector('.pv-status');
+    if (pill) pill.textContent = pillText;
+  }
+
+  // ---- geometry helpers (coordinates relative to the stage) ----
+  function relRect(el) {
+    var s = stage.getBoundingClientRect();
+    var r = el.getBoundingClientRect();
+    return { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height };
+  }
+  function edgePoint(r, tx, ty) {
+    var cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    var dx = tx - cx, dy = ty - cy;
+    if (dx === 0 && dy === 0) return { x: cx, y: cy };
+    var sx = dx === 0 ? Infinity : Math.abs((r.w / 2) / dx);
+    var sy = dy === 0 ? Infinity : Math.abs((r.h / 2) / dy);
+    var s = Math.min(sx, sy);
+    return { x: cx + dx * s, y: cy + dy * s };
+  }
+  function mkLine(a, b, kind) {
+    var line = document.createElementNS(SVGNS, 'line');
+    line.setAttribute('x1', a.x.toFixed(1));
+    line.setAttribute('y1', a.y.toFixed(1));
+    line.setAttribute('x2', b.x.toFixed(1));
+    line.setAttribute('y2', b.y.toFixed(1));
+    if (kind === 'live') {
+      line.setAttribute('stroke', 'var(--accent2)');
+      line.setAttribute('stroke-width', '2.4');
+      line.setAttribute('marker-end', 'url(#pv-arrow)');
+    } else if (kind === 'blocked') {
+      line.setAttribute('stroke', 'var(--gap)');
+      line.setAttribute('stroke-width', '2');
+      line.setAttribute('stroke-dasharray', '6 5');
+    } else { // dark
+      line.setAttribute('stroke', 'var(--line)');
+      line.setAttribute('stroke-width', '1.5');
+      line.setAttribute('stroke-dasharray', '3 5');
+    }
+    line.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(line);
+  }
+  function mkCut(mx, my) {
+    var g = document.createElementNS(SVGNS, 'g');
+    var c = document.createElementNS(SVGNS, 'circle');
+    c.setAttribute('cx', mx); c.setAttribute('cy', my); c.setAttribute('r', '7.5');
+    c.setAttribute('fill', '#fff'); c.setAttribute('stroke', 'var(--gap)'); c.setAttribute('stroke-width', '1.5');
+    g.appendChild(c);
+    [[-3, -3, 3, 3], [-3, 3, 3, -3]].forEach(function (d) {
+      var l = document.createElementNS(SVGNS, 'line');
+      l.setAttribute('x1', mx + d[0]); l.setAttribute('y1', my + d[1]);
+      l.setAttribute('x2', mx + d[2]); l.setAttribute('y2', my + d[3]);
+      l.setAttribute('stroke', 'var(--gap)'); l.setAttribute('stroke-width', '1.8');
+      l.setAttribute('stroke-linecap', 'round');
+      g.appendChild(l);
+    });
+    svg.appendChild(g);
+  }
+
+  // ---- draw all connectors between measured node positions ----
+  function drawWires() {
+    // wipe everything except <defs>
+    var kids = Array.prototype.slice.call(svg.childNodes);
+    kids.forEach(function (k) { if (k.nodeName !== 'defs') svg.removeChild(k); });
+
+    var sr = stage.getBoundingClientRect();
+    svg.setAttribute('width', sr.width);
+    svg.setAttribute('height', sr.height);
+
+    var dev = relRect(nodes.device);
+    var prov = relRect(nodes.provider);
+    var stacked = prov.y > dev.y + dev.h - 2; // single-column layout
+
+    function connect(srcR, tgtR, kind) {
+      var sc = { x: srcR.x + srcR.w / 2, y: srcR.y + srcR.h / 2 };
+      var tc = { x: tgtR.x + tgtR.w / 2, y: tgtR.y + tgtR.h / 2 };
+      var a = edgePoint(srcR, tc.x, tc.y);
+      var b = edgePoint(tgtR, sc.x, sc.y);
+      // pull the arrow tip a few px off the target border so it stays visible
+      var dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+      b = { x: b.x - (dx / len) * 6, y: b.y - (dy / len) * 6 };
+      mkLine(a, b, kind);
+      if (kind === 'blocked') mkCut((a.x + b.x) / 2, (a.y + b.y) / 2);
+    }
+
+    var trunk = state.onPrem ? 'blocked' : 'live';
+    connect(dev, prov, trunk);
+    if (state.onPrem) connect(dev, relRect(nodes.local), 'live');
+
+    // provider -> destinations
+    var trainKind = state.onPrem ? 'dark' : (state.noTrain ? 'blocked' : 'live');
+    var logKind = state.onPrem ? 'dark' : 'live';
+    var retainKind = state.onPrem ? 'dark' : (state.zeroRet ? 'blocked' : 'live');
+    connect(prov, relRect(nodes.train), trainKind);
+    connect(prov, relRect(nodes.log), logKind);
+    connect(prov, relRect(nodes.retain), retainKind);
+
+    // boundary marker: only meaningful in the side-by-side layout
+    if (!stacked) {
+      var bx = (dev.x + dev.w + prov.x) / 2;
+      var bl = document.createElementNS(SVGNS, 'line');
+      bl.setAttribute('x1', bx); bl.setAttribute('y1', 6);
+      bl.setAttribute('x2', bx); bl.setAttribute('y2', sr.height - 6);
+      bl.setAttribute('stroke', 'var(--muted)'); bl.setAttribute('stroke-width', '1');
+      bl.setAttribute('stroke-dasharray', '2 5'); bl.setAttribute('opacity', '0.7');
+      svg.appendChild(bl);
+      var t = document.createElementNS(SVGNS, 'text');
+      t.setAttribute('x', bx); t.setAttribute('y', sr.height - 2);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('font-size', '9.5'); t.setAttribute('fill', 'var(--muted)');
+      t.setAttribute('font-family', 'var(--dg-sans)');
+      t.textContent = 'leaves your device';
+      svg.appendChild(t);
+    }
+  }
+
+  // ---- recompute node states + verdict, then redraw wires ----
+  function render() {
+    // toggle button visuals
+    btn.noTrain.classList.toggle('is-active', state.noTrain);
+    btn.noTrain.setAttribute('aria-pressed', state.noTrain);
+    btn.zeroRet.classList.toggle('is-active', state.zeroRet);
+    btn.zeroRet.setAttribute('aria-pressed', state.zeroRet);
+    btn.onPrem.classList.toggle('is-active', state.onPrem);
+    btn.onPrem.setAttribute('aria-pressed', state.onPrem);
+    // on-prem overrides the other two; mark them not-applicable
+    btn.noTrain.disabled = state.onPrem;
+    btn.zeroRet.disabled = state.onPrem;
+    btn.noTrain.style.opacity = state.onPrem ? '0.45' : '';
+    btn.zeroRet.style.opacity = state.onPrem ? '0.45' : '';
+
+    // provider + local nodes
+    nodes.provider.classList.toggle('s-dark', state.onPrem);
+    nodes.local.classList.toggle('s-ghost', !state.onPrem);
+    nodes.local.classList.toggle('s-on', state.onPrem);
+    localSub.textContent = state.onPrem
+      ? 'running on your hardware'
+      : 'off: an on-prem option';
+
+    var reach = [], block = [];
+    if (state.onPrem) {
+      setDest(nodes.train, 'dark', 'no data');
+      setDest(nodes.log, 'dark', 'no data');
+      setDest(nodes.retain, 'dark', 'no data');
+      logSub.textContent = 'requests recorded for abuse review';
+    } else {
+      // training
+      if (state.noTrain) { setDest(nodes.train, 'blocked', 'you blocked this'); block.push('training'); }
+      else { setDest(nodes.train, 'live', 'data arrives'); reach.push('training'); }
+      // logging (always reachable while hosted; retention setting changes its note)
+      setDest(nodes.log, 'live', 'data arrives'); reach.push('safety logs');
+      logSub.textContent = state.zeroRet
+        ? 'checked in memory, not stored'
+        : 'requests recorded for abuse review';
+      // retention
+      if (state.zeroRet) { setDest(nodes.retain, 'blocked', 'you blocked this'); block.push('retention'); }
+      else { setDest(nodes.retain, 'live', 'data arrives'); reach.push('retention'); }
+    }
+
+    // verdict text
+    vChips.innerHTML = '';
+    if (state.onPrem) {
+      vHead.textContent = 'Nothing leaves your walls.';
+      var chip = document.createElement('span');
+      chip.className = 'pv-chip is-reach';
+      chip.textContent = 'stays on your hardware';
+      vChips.appendChild(chip);
+      vNote.innerHTML = '<b>Local model.</b> Prompts and outputs never reach a ' +
+        'third party, so there is no external training, logging, or retention to trust. ' +
+        'The cost is buying and maintaining the hardware yourself.';
+    } else {
+      vHead.textContent = 'Your prompt can reach:';
+      reach.forEach(function (r) {
+        var c = document.createElement('span'); c.className = 'pv-chip is-reach'; c.textContent = r;
+        vChips.appendChild(c);
+      });
+      block.forEach(function (b) {
+        var c = document.createElement('span'); c.className = 'pv-chip is-block'; c.textContent = b;
+        vChips.appendChild(c);
+      });
+      var note;
+      if (!state.noTrain && !state.zeroRet) {
+        note = '<b>Free consumer tier.</b> Your prompt may train future models and is ' +
+          'kept for a window. Safest only for non-sensitive text.';
+      } else if (state.noTrain && !state.zeroRet) {
+        note = '<b>No-training on.</b> Not used to improve models, but copies are still ' +
+          'retained for a while: no-training and retention are separate promises.';
+      } else if (!state.noTrain && state.zeroRet) {
+        note = '<b>Zero-retention on.</b> Nothing is kept, yet inputs could still train ' +
+          'the model. Check both settings, not just one.';
+      } else {
+        note = '<b>Enterprise / API terms.</b> No training and no retention. ' +
+          'Transient safety logging still happens while the prompt is processed.';
+      }
+      vNote.innerHTML = note;
+    }
+
+    requestAnimationFrame(function () {
+      drawWires();
+      if (window.reportDiagramHeight) window.reportDiagramHeight();
+    });
+  }
+
+  btn.noTrain.addEventListener('click', function () { state.noTrain = !state.noTrain; render(); });
+  btn.zeroRet.addEventListener('click', function () { state.zeroRet = !state.zeroRet; render(); });
+  btn.onPrem.addEventListener('click', function () { state.onPrem = !state.onPrem; render(); });
+
+  window.addEventListener('resize', drawWires);
+  if (typeof ResizeObserver !== 'undefined') {
+    try { new ResizeObserver(drawWires).observe(grid); } catch (e) {}
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

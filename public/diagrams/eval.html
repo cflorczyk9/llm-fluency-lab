@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="eval">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The score depends on how you grade</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* eval-only: a benchmark scoreboard whose verdicts shift with the grader */
+  #ev-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  #ev-methods { display: inline-flex; }
+  #ev-methods button { white-space: nowrap; }
+  #ev-score {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 7px;
+    font-variant-numeric: tabular-nums;
+  }
+  #ev-score .num {
+    font-family: var(--dg-serif);
+    font-size: 27px;
+    line-height: 1;
+    color: var(--accent2);
+    font-weight: 400;
+  }
+  #ev-score .den { font-size: 15px; color: var(--muted); }
+  #ev-score .lbl {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    font-weight: 700;
+    margin-left: 2px;
+  }
+
+  .ev-colhead {
+    display: grid;
+    grid-template-columns: 22px 1fr 116px;
+    gap: 10px;
+    align-items: end;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-bottom: 8px;
+  }
+  .ev-colhead .c3 { text-align: right; }
+
+  .ev-row {
+    display: grid;
+    grid-template-columns: 22px 1fr 116px;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 8px 10px 0;
+    border-top: 1px solid var(--line);
+    border-left: 3px solid transparent;
+    margin-left: -3px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .ev-row.changed {
+    border-left-color: var(--gold);
+    background: rgba(217, 119, 6, 0.05);
+  }
+  .ev-row.spotlight {
+    border-left-color: var(--accent);
+    background: rgba(47, 140, 255, 0.06);
+  }
+  .ev-idx {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--panel2);
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .ev-task {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin: 0 0 2px;
+  }
+  .ev-ans {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.35;
+  }
+  .ev-reason {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.4;
+    margin-top: 3px;
+  }
+  .ev-verdict {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  .ev-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 999px;
+    line-height: 1;
+    transition: transform 0.16s ease;
+  }
+  .ev-pill .gl { font-size: 12px; }
+  .ev-pill.pass { background: var(--accent); color: #fff; border: 1px solid var(--accent2); }
+  .ev-pill.fail { background: #fff; color: var(--gap); border: 1px solid var(--gap); }
+  .ev-row.flip .ev-pill { transform: scale(1.08); }
+  .ev-tag {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .ev-tag.spot { color: var(--accent2); }
+
+  #ev-note {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 12px 14px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  #ev-note b { color: var(--ink); font-weight: 600; }
+  #ev-note .k { color: var(--accent2); font-weight: 600; }
+
+  @media (max-width: 480px) {
+    .ev-colhead, .ev-row { grid-template-columns: 20px 1fr 92px; }
+    #ev-score .num { font-size: 23px; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Evaluation and evals</p>
+    <h1 class="dg-title">The score depends on how you grade</h1>
+  </div>
+  <p class="dg-caption">
+    One model, one fixed set of six test cases. Switch the <b>scoring method</b>
+    and watch the verdicts (and the headline score) move. The answers never
+    change, but what counts as "correct" does.
+  </p>
+
+  <div id="ev-top">
+    <div class="dg-seg" id="ev-methods" role="group" aria-label="Scoring method">
+      <button type="button" data-m="exact" class="is-on" aria-pressed="true">Exact match</button>
+      <button type="button" data-m="judge" aria-pressed="false">LLM as judge</button>
+      <button type="button" data-m="human" aria-pressed="false">Human rating</button>
+    </div>
+    <div id="ev-score" aria-live="polite">
+      <span class="num" id="ev-num">1</span><span class="den">/ 6</span>
+      <span class="lbl">pass</span>
+    </div>
+  </div>
+
+  <div class="dg-stage">
+    <div class="ev-colhead">
+      <span></span>
+      <span class="c2">Test case and the model's answer</span>
+      <span class="c3">Verdict</span>
+    </div>
+    <div id="ev-rows"></div>
+  </div>
+
+  <div id="ev-note" aria-live="polite"></div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--accent)"></i> pass</span>
+    <span><i class="dg-swatch" style="background:#fff;border:1px solid var(--gap)"></i> fail</span>
+    <span><i class="dg-swatch" style="background:var(--gold)"></i> verdict changed on this switch</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var reduce = false;
+  try {
+    reduce = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {}
+
+  // Six test cases. Each method renders its own verdict + reason for the SAME
+  // model answer, so switching graders moves the verdicts without changing a
+  // single output. Case 4 is the teaching case: a confident wrong citation that
+  // the LLM judge rubber-stamps and only a human catches.
+  var CASES = [
+    {
+      task: 'Extract the invoice total',
+      ans: '"$1,240.00"',
+      exact: [true,  'identical to the reference string'],
+      judge: [true,  'correct value'],
+      human: [true,  'correct']
+    },
+    {
+      task: 'Summarize the refund policy',
+      ans: '"A full refund is available within 30 days."',
+      exact: [false, 'wording differs from the reference'],
+      judge: [true,  'same meaning, just reworded'],
+      human: [true,  'accurate paraphrase']
+    },
+    {
+      task: 'What year was the company founded',
+      ans: '"The company was founded in 2009."',
+      exact: [false, 'extra words around the right answer'],
+      judge: [true,  'contains the correct year'],
+      human: [true,  'correct']
+    },
+    {
+      task: 'Cite the clause that allows cancellation',
+      ans: '"Section 4.1 permits cancellation at any time."',
+      exact: [false, 'does not match the reference "Section 7.2"'],
+      judge: [true,  'reads confident and on topic'],
+      human: [false, 'wrong clause: the source says 7.2']
+    },
+    {
+      task: 'List the three account tiers',
+      ans: '"Basic and Plus."',
+      exact: [false, 'incomplete versus the reference'],
+      judge: [false, 'one tier is missing'],
+      human: [false, 'left out the Pro tier']
+    },
+    {
+      task: 'Rewrite the intro in a friendlier tone',
+      ans: '"Hey there, so glad you stopped by! We built this for you..."',
+      exact: [false, 'open ended: no single string to match'],
+      judge: [true,  'friendly and on task'],
+      human: [true,  'meets the request']
+    }
+  ];
+
+  var NOTES = {
+    exact: 'Exact match is strict and cheap: it only passes a character-for-character match. ' +
+           'So it wrongly fails the correct paraphrases in cases <b>2 and 3</b>, and it <b>cannot grade</b> ' +
+           'the open-ended rewrite in case 6 at all.',
+    judge: 'An <span class="k">LLM judge</span> scales and forgives wording, so the paraphrases now pass. ' +
+           'But look at case <b>4</b>: it rubber-stamped a confident, <b>wrong citation</b>. ' +
+           'A higher score here is partly false.',
+    human: 'Human rating is the gold standard: it caught the wrong citation in case <b>4</b> that the ' +
+           'judge waved through. The cost is that people are <b>slow and expensive</b>, so you cannot grade thousands this way.'
+  };
+
+  var rowsEl = document.getElementById('ev-rows');
+  var numEl = document.getElementById('ev-num');
+  var noteEl = document.getElementById('ev-note');
+  var btns = Array.prototype.slice.call(
+    document.querySelectorAll('#ev-methods button'));
+
+  var method = 'exact';
+  var prevMethod = null; // for "changed" markers
+
+  function bump() { if (window.reportDiagramHeight) window.reportDiagramHeight(); }
+
+  function buildRows() {
+    rowsEl.innerHTML = '';
+    CASES.forEach(function (c, i) {
+      var row = document.createElement('div');
+      row.className = 'ev-row';
+      row.dataset.idx = i;
+
+      var idx = document.createElement('div');
+      idx.className = 'ev-idx';
+      idx.textContent = (i + 1);
+
+      var mid = document.createElement('div');
+      var task = document.createElement('p');
+      task.className = 'ev-task';
+      task.textContent = c.task;
+      var ans = document.createElement('div');
+      ans.className = 'ev-ans';
+      ans.textContent = c.ans;
+      var reason = document.createElement('div');
+      reason.className = 'ev-reason';
+      mid.appendChild(task);
+      mid.appendChild(ans);
+      mid.appendChild(reason);
+
+      var v = document.createElement('div');
+      v.className = 'ev-verdict';
+      var pill = document.createElement('span');
+      pill.className = 'ev-pill';
+      var tag = document.createElement('span');
+      tag.className = 'ev-tag';
+      v.appendChild(pill);
+      v.appendChild(tag);
+
+      row.appendChild(idx);
+      row.appendChild(mid);
+      row.appendChild(v);
+      rowsEl.appendChild(row);
+    });
+  }
+
+  function render(animate) {
+    var pass = 0;
+    var rows = rowsEl.querySelectorAll('.ev-row');
+    CASES.forEach(function (c, i) {
+      var verdict = c[method];
+      var prev = prevMethod ? c[prevMethod] : null;
+      var changed = prev && prev[0] !== verdict[0];
+      if (verdict[0]) pass++;
+
+      var row = rows[i];
+      var pill = row.querySelector('.ev-pill');
+      var reason = row.querySelector('.ev-reason');
+      var tag = row.querySelector('.ev-tag');
+
+      pill.className = 'ev-pill ' + (verdict[0] ? 'pass' : 'fail');
+      pill.innerHTML = '<span class="gl" aria-hidden="true">' +
+        (verdict[0] ? '✓' : '✕') + '</span>' +
+        (verdict[0] ? 'Pass' : 'Fail');
+      reason.textContent = verdict[1];
+
+      row.classList.remove('changed', 'spotlight', 'flip');
+      tag.className = 'ev-tag';
+      tag.textContent = '';
+
+      // Spotlight the citation case under the two graders that disagree on it.
+      if (i === 3 && (method === 'judge' || method === 'human')) {
+        row.classList.add('spotlight');
+        tag.className = 'ev-tag spot';
+        tag.textContent = method === 'judge' ? 'false pass' : 'caught it';
+      } else if (changed) {
+        row.classList.add('changed');
+        tag.textContent = 'changed';
+      }
+      if (animate && changed && !reduce) {
+        row.classList.add('flip');
+        (function (r) { setTimeout(function () { r.classList.remove('flip'); }, 220); })(row);
+      }
+    });
+
+    numEl.textContent = pass;
+    noteEl.innerHTML = NOTES[method];
+    bump();
+  }
+
+  function select(m) {
+    if (m === method) return;
+    prevMethod = method;
+    method = m;
+    btns.forEach(function (b) {
+      var on = b.dataset.m === m;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    render(true);
+  }
+
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () { select(b.dataset.m); });
+  });
+
+  buildRows();
+  render(false);
+})();
+</script>
+</body>
+</html>

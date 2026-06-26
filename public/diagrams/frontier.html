@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="frontier">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Scrub the year, watch capabilities cross in</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* frontier-only: a capability-vs-year chart with a year scrubber */
+  .fr-chart { width: 100%; }
+  .fr-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+  .fr-axis-line { stroke: var(--line); stroke-width: 1; }
+  .fr-grid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 5; opacity: 0.7; }
+  .fr-tick { font-size: 10px; fill: var(--muted); font-family: var(--dg-sans); }
+  .fr-ylab { font-size: 10.5px; fill: var(--muted); font-family: var(--dg-sans); }
+  .fr-curve-solid { fill: none; stroke: var(--accent2); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .fr-curve-dash { fill: none; stroke: var(--accent2); stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 6 6; opacity: 0.8; }
+  .fr-area { fill: var(--accent); opacity: 0.07; }
+  .fr-haze { fill: var(--muted); opacity: 0.06; }
+
+  .fr-dot { stroke: #fff; stroke-width: 1.6; cursor: pointer; transition: r 0.15s ease; }
+  .fr-dot.is-crossed { fill: var(--accent2); }
+  .fr-dot.is-emerging { fill: var(--panel); stroke: var(--muted); stroke-dasharray: 2 2; }
+  .fr-dot.is-hot { stroke: var(--gold); stroke-width: 2.4; }
+
+  .fr-sweep-line { stroke: var(--gold); stroke-width: 1.6; }
+  .fr-flag-box { fill: var(--gold); }
+  .fr-flag-txt { fill: #fff; font-size: 11px; font-weight: 700; font-family: var(--dg-sans); }
+  .fr-now-dot { fill: var(--gold); stroke: #fff; stroke-width: 1.8; }
+
+  .fr-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .fr-row .dg-slider-wrap { flex: 1 1 240px; }
+
+  .fr-chips-wrap { margin-top: 2px; }
+  .fr-chips-lab {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 7px;
+  }
+  .fr-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fr-chip {
+    appearance: none;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--muted);
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .fr-chip .fr-yr { font-variant-numeric: tabular-nums; font-weight: 700; opacity: 0.7; }
+  .fr-chip.is-crossed { border-color: var(--accent); color: var(--accent2); }
+  .fr-chip.is-emerging { border-style: dashed; color: var(--muted); }
+  .fr-chip:hover { background: var(--panel2); border-color: var(--accent); }
+  .fr-chip .fr-cdot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent2); flex: 0 0 auto;
+  }
+  .fr-chip.is-emerging .fr-cdot { background: transparent; border: 1.5px dashed var(--muted); }
+
+  .fr-note {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 12px 0 0;
+    min-height: 34px;
+  }
+  .fr-note b { color: var(--ink); font-weight: 600; }
+  .fr-honest {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin: 8px 0 0;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 480px) {
+    .fr-tick { font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Where It Is Heading</p>
+    <h1 class="dg-title">Scrub the year, watch capabilities cross in</h1>
+  </div>
+  <p class="dg-caption">
+    The frontier rises as compute, data, and parameters grow. Drag the year:
+    each emerging direction (longer context, multimodal, reasoning, agents)
+    crosses a line from <b>not yet</b> to <b>reliably available</b>. The dashed
+    part of the curve is near-term and uncertain.
+  </p>
+
+  <div class="dg-stage">
+    <div class="fr-chart">
+      <svg id="fr-svg" viewBox="0 0 720 320" role="img"
+        aria-label="A rising capability curve from 2019 to 2027 with capability milestones that activate as the year advances">
+        <!-- static fallback so a labeled chart shows even without JS -->
+        <polyline id="fr-fallback" points="48,260 198,205 348,140 498,80 648,40"
+          fill="none" stroke="var(--accent2)" stroke-width="2.4" />
+        <g id="fr-plot"></g>
+      </svg>
+    </div>
+
+    <div class="fr-row">
+      <div class="dg-slider-wrap">
+        <label class="dg-slider-lab" for="fr-slider">
+          <span>Year</span><b id="fr-yearval">2026</b>
+        </label>
+        <input class="dg-slider" id="fr-slider" type="range"
+          min="2019" max="2027" step="1" value="2026"
+          aria-label="Year from 2019 to 2027" />
+      </div>
+    </div>
+
+    <p class="fr-note" id="fr-note" aria-live="polite"></p>
+  </div>
+
+  <div class="fr-chips-wrap">
+    <p class="fr-chips-lab">Capabilities (click to jump to when each crossed in)</p>
+    <div class="fr-chips" id="fr-chips" role="group" aria-label="Capability milestones"></div>
+  </div>
+
+  <p class="fr-honest">
+    The curve's shape is illustrative. The lesson is the order capabilities
+    arrive and the direction of travel, not exact numbers. Meanwhile the cost of
+    yesterday's quality keeps falling, so capable models keep getting smaller and
+    cheaper.
+  </p>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch is-line" style="background:var(--accent2)"></i> shipped / observed</span>
+    <span><i class="dg-swatch is-line" style="background:var(--accent2);opacity:0.55"></i> near-term, uncertain</span>
+    <span><i class="dg-swatch is-dot" style="background:var(--accent2)"></i> crossed in</span>
+    <span><i class="dg-swatch is-dot" style="background:#fff;border:1.5px dashed var(--muted)"></i> emerging</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var plot = root.querySelector('#fr-plot');
+  var fallback = root.querySelector('#fr-fallback');
+  var slider = root.querySelector('#fr-slider');
+  var yearVal = root.querySelector('#fr-yearval');
+  var noteEl = root.querySelector('#fr-note');
+  var chipsEl = root.querySelector('#fr-chips');
+
+  // ---- chart geometry (viewBox units) ----
+  var Y0 = 2019, Y1 = 2027, SOLID_UNTIL = 2026;
+  var PL = 48, PR = 702, PT = 20, PB = 286;
+  function xFor(y) { return PL + (y - Y0) / (Y1 - Y0) * (PR - PL); }
+  function yFor(c) { return PB - (c / 100) * (PB - PT); }
+
+  // illustrative capability level per year
+  var CAP = {
+    2019: 12, 2020: 25, 2021: 35, 2022: 48, 2023: 62,
+    2024: 74, 2025: 84, 2026: 91, 2027: 96
+  };
+  function capAt(y) { return CAP[y] != null ? CAP[y] : 0; }
+
+  // tagged directions and the year each becomes reliably available
+  var MILES = [
+    { key: 'chat',  year: 2020, label: 'Fluent chat' },
+    { key: 'rag',   year: 2022, label: 'Code + retrieval' },
+    { key: 'ctx',   year: 2023, label: 'Long context + memory' },
+    { key: 'multi', year: 2024, label: 'Multimodal (image, audio, video)' },
+    { key: 'reason',year: 2025, label: 'Reasoning (thinks first)' },
+    { key: 'agent', year: 2026, label: 'Agents (multi-step tools)' },
+    { key: 'next',  year: 2027, label: "What's next?", uncertain: true }
+  ];
+
+  function el(tag, attrs) {
+    var e = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) if (attrs.hasOwnProperty(k)) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // ---- build the static chart parts once ----
+  function buildChart() {
+    if (fallback) fallback.style.display = 'none';
+    plot.innerHTML = '';
+
+    // y gridlines + labels
+    [0, 50, 100].forEach(function (c) {
+      plot.appendChild(el('line', {
+        x1: PL, y1: yFor(c), x2: PR, y2: yFor(c), class: 'fr-grid'
+      }));
+    });
+    var yl = el('text', { x: 12, y: yFor(50), class: 'fr-ylab',
+      transform: 'rotate(-90 12 ' + yFor(50) + ')', 'text-anchor': 'middle' });
+    yl.textContent = 'capability';
+    plot.appendChild(yl);
+    var yl2 = el('text', { x: 26, y: yFor(50), class: 'fr-ylab',
+      transform: 'rotate(-90 26 ' + yFor(50) + ')', 'text-anchor': 'middle' });
+    yl2.setAttribute('font-size', '8.5');
+    yl2.textContent = '(compute, data, parameters)';
+    plot.appendChild(yl2);
+
+    // uncertainty haze over the near-term region
+    plot.appendChild(el('rect', {
+      x: xFor(SOLID_UNTIL), y: PT, width: xFor(Y1) - xFor(SOLID_UNTIL),
+      height: PB - PT, class: 'fr-haze'
+    }));
+
+    // area under the curve (accumulating scale)
+    var years = [];
+    for (var y = Y0; y <= Y1; y++) years.push(y);
+    var areaD = 'M' + xFor(Y0) + ',' + PB;
+    years.forEach(function (y) { areaD += ' L' + xFor(y).toFixed(1) + ',' + yFor(capAt(y)).toFixed(1); });
+    areaD += ' L' + xFor(Y1) + ',' + PB + ' Z';
+    plot.appendChild(el('path', { d: areaD, class: 'fr-area' }));
+
+    // curve: solid up to SOLID_UNTIL, dashed beyond
+    var solidD = '', dashD = '';
+    years.forEach(function (y) {
+      var seg = (y === Y0 ? 'M' : 'L') + xFor(y).toFixed(1) + ',' + yFor(capAt(y)).toFixed(1);
+      if (y <= SOLID_UNTIL) solidD += (solidD ? ' ' : '') + seg;
+    });
+    // dashed portion starts at SOLID_UNTIL so the line is continuous
+    for (var yy = SOLID_UNTIL; yy <= Y1; yy++) {
+      dashD += (yy === SOLID_UNTIL ? 'M' : ' L') + xFor(yy).toFixed(1) + ',' + yFor(capAt(yy)).toFixed(1);
+    }
+    plot.appendChild(el('path', { d: solidD, class: 'fr-curve-solid' }));
+    plot.appendChild(el('path', { d: dashD, class: 'fr-curve-dash' }));
+
+    // x-axis + year ticks
+    plot.appendChild(el('line', { x1: PL, y1: PB, x2: PR, y2: PB, class: 'fr-axis-line' }));
+    years.forEach(function (y) {
+      var t = el('text', { x: xFor(y), y: PB + 15, class: 'fr-tick', 'text-anchor': 'middle' });
+      t.textContent = "'" + String(y).slice(2);
+      plot.appendChild(t);
+    });
+
+    // milestone dots
+    MILES.forEach(function (m) {
+      var dot = el('circle', {
+        cx: xFor(m.year), cy: yFor(capAt(m.year)), r: 5.5,
+        class: 'fr-dot', id: 'fr-dot-' + m.key
+      });
+      plot.appendChild(dot);
+    });
+
+    // sweep group (vertical guide + flag), positioned by transform each update
+    var sweep = el('g', { id: 'fr-sweep' });
+    sweep.appendChild(el('line', { x1: 0, y1: PT - 4, x2: 0, y2: PB, class: 'fr-sweep-line' }));
+    var fb = el('rect', { x: -17, y: PT - 18, width: 34, height: 15, rx: 4, class: 'fr-flag-box' });
+    sweep.appendChild(fb);
+    var ft = el('text', { x: 0, y: PT - 7, class: 'fr-flag-txt', 'text-anchor': 'middle' });
+    ft.setAttribute('id', 'fr-flag-txt');
+    sweep.appendChild(ft);
+    plot.appendChild(sweep);
+
+    // a dot that rides the curve at the current year
+    plot.appendChild(el('circle', { id: 'fr-now', cx: 0, cy: 0, r: 4.5, class: 'fr-now-dot' }));
+  }
+
+  // ---- build the capability chips ----
+  function buildChips() {
+    chipsEl.innerHTML = '';
+    MILES.forEach(function (m) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'fr-chip';
+      b.setAttribute('data-key', m.key);
+      b.setAttribute('data-year', m.year);
+      b.innerHTML = '<span class="fr-cdot"></span>' + m.label +
+        ' <span class="fr-yr">' + (m.uncertain ? '?' : "'" + String(m.year).slice(2)) + '</span>';
+      b.addEventListener('click', function () {
+        slider.value = m.uncertain ? Y1 : m.year;
+        update();
+      });
+      b.addEventListener('mouseenter', function () { hot(m.key); });
+      b.addEventListener('mouseleave', function () { hot(null); });
+      chipsEl.appendChild(b);
+    });
+  }
+
+  function hot(key) {
+    MILES.forEach(function (m) {
+      var d = root.querySelector('#fr-dot-' + m.key);
+      if (d) d.classList.toggle('is-hot', key === m.key);
+    });
+  }
+
+  // ---- update everything for the current slider year ----
+  function update() {
+    var year = parseInt(slider.value, 10);
+    yearVal.textContent = year;
+
+    // sweep position + flag
+    var sweep = root.querySelector('#fr-sweep');
+    var flagTxt = root.querySelector('#fr-flag-txt');
+    var now = root.querySelector('#fr-now');
+    if (sweep) sweep.setAttribute('transform', 'translate(' + xFor(year).toFixed(1) + ',0)');
+    if (flagTxt) flagTxt.textContent = year;
+    if (now) {
+      now.setAttribute('cx', xFor(year).toFixed(1));
+      now.setAttribute('cy', yFor(capAt(year)).toFixed(1));
+    }
+
+    // dots + chips: crossed vs emerging
+    MILES.forEach(function (m) {
+      var crossed = !m.uncertain && year >= m.year;
+      var d = root.querySelector('#fr-dot-' + m.key);
+      if (d) {
+        d.classList.toggle('is-crossed', crossed);
+        d.classList.toggle('is-emerging', !crossed);
+        d.setAttribute('r', crossed ? 6 : 5);
+      }
+      var c = chipsEl.querySelector('[data-key="' + m.key + '"]');
+      if (c) {
+        c.classList.toggle('is-crossed', crossed);
+        c.classList.toggle('is-emerging', !crossed);
+      }
+    });
+
+    // note keyed to the era
+    var note;
+    if (year <= 2021) {
+      note = '<b>Early days.</b> Fluent text, little else reliable yet.';
+    } else if (year <= 2023) {
+      note = '<b>Tools and memory arrive.</b> Retrieval, code help, and longer context make whole-document work possible.';
+    } else if (year === 2024) {
+      note = '<b>Models gain senses.</b> Images, audio, and video join text, so they work on real documents and screens.';
+    } else if (year === 2025) {
+      note = '<b>Models reason.</b> Spending more effort to think before answering lifts reliability on hard, multi-step problems.';
+    } else if (year === 2026) {
+      note = '<b>Agents step in.</b> Planning and tool use let models do multi-step work. We are near the edge of what has actually shipped.';
+    } else {
+      note = '<b>Past here is extrapolation.</b> The dashed curve is a reasonable guess, not a fact: progress comes in uneven jumps.';
+    }
+    noteEl.innerHTML = note;
+
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  try {
+    buildChart();
+  } catch (e) {
+    // leave the static fallback polyline visible if the build fails
+    if (fallback) fallback.style.display = '';
+  }
+  buildChips();
+  slider.addEventListener('input', update);
+  update();
+})();
+</script>
+</body>
+</html>

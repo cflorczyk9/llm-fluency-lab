@@ -1,0 +1,122 @@
+/* Base, reset, and typography. Ported feel from the original single-file app. */
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent-deep);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header / brand */
+header.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.brand {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.brand::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.brand span {
+  color: var(--accent-deep);
+}
+.sub {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Section headings */
+h2.section {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+/* Generic layout helpers shared across views */
+.grid {
+  display: grid;
+  gap: 16px;
+}
+.view {
+  margin-top: 18px;
+}
+.muted {
+  color: var(--muted);
+}
+
+footer {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+  padding: 30px 10px 10px;
+}
+
+/* Animations reused by cards / reveals */
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Form controls inherit the warm palette */
+select,
+input,
+textarea {
+  font: inherit;
+  color: var(--ink);
+}

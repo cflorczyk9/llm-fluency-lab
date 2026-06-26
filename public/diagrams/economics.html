@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="economics">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Token cost calculator</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* economics-only: the price header, live equation, cost split, and totals */
+  .eco-price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .eco-price .eco-tier {
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 13.5px;
+    margin-right: 2px;
+  }
+
+  .eco-eq {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+  .eco-eq .num { font-variant-numeric: tabular-nums; }
+  .eco-eq .in { color: var(--accent2); font-weight: 700; }
+  .eco-eq .out { color: var(--gold); font-weight: 700; }
+  .eco-eq .eq-total { color: var(--ink); font-weight: 700; }
+
+  #eco .eco-bars .dg-bar-label { flex-basis: 132px; }
+  #eco .eco-bars .dg-bar-val {
+    flex-basis: 96px;
+    text-align: left;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eco-totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .eco-card {
+    flex: 1 1 150px;
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 12px 14px;
+    background: var(--panel);
+  }
+  .eco-card.is-month { background: var(--panel2); }
+  .eco-card .eco-k {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 4px;
+  }
+  .eco-card .eco-v {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent2);
+  }
+  .eco-card.is-month .eco-v { color: var(--gold); }
+  .eco-card .eco-sub { font-size: 11px; color: var(--muted); margin: 4px 0 0; }
+
+  .eco-insight {
+    margin: 14px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+  .eco-insight b { color: var(--ink); font-weight: 600; }
+
+  .eco-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px 24px;
+    align-items: flex-end;
+    margin-top: 4px;
+  }
+  .eco-seg-wrap { display: flex; flex-direction: column; gap: 7px; }
+  .eco-seg-wrap > span {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .eco-words { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="diagram-root" id="eco">
+  <div>
+    <p class="dg-kicker">Cost &amp; token economics</p>
+    <h1 class="dg-title">What one model call actually costs</h1>
+  </div>
+  <p class="dg-caption">
+    You pay per token, and <b>output tokens cost several times more than input</b>,
+    because the model writes the answer one slow token at a time. Set the prompt
+    length, the answer length, and the model tier to watch the per-call cost and the
+    monthly bill move.
+  </p>
+
+  <div class="dg-stage">
+    <div class="eco-price">
+      <span class="eco-tier" id="eco-tier-name">Mid tier</span>
+      <span class="dg-chip is-mono" id="eco-in-chip">in $3.00 /M</span>
+      <span class="dg-chip is-gold is-mono" id="eco-out-chip">out $15.00 /M</span>
+      <span class="dg-badge is-gold" id="eco-mult">5x more for output</span>
+    </div>
+
+    <div class="eco-eq" id="eco-eq" aria-live="polite"></div>
+
+    <div class="eco-bars">
+      <div class="dg-bar-row">
+        <span class="dg-bar-label">Input cost / call</span>
+        <div class="dg-track"><div class="dg-bar is-top" id="eco-in-bar"></div></div>
+        <span class="dg-bar-val" id="eco-in-val">$0.0060</span>
+      </div>
+      <div class="dg-bar-row">
+        <span class="dg-bar-label">Output cost / call</span>
+        <div class="dg-track"><div class="dg-bar is-gold" id="eco-out-bar"></div></div>
+        <span class="dg-bar-val" id="eco-out-val">$0.0075</span>
+      </div>
+    </div>
+
+    <div class="eco-totals">
+      <div class="eco-card">
+        <p class="eco-k">Per call</p>
+        <div class="eco-v" id="eco-percall">$0.0135</div>
+        <p class="eco-sub" id="eco-percall-sub">input + output</p>
+      </div>
+      <div class="eco-card is-month">
+        <p class="eco-k">Per month</p>
+        <div class="eco-v" id="eco-month">$4,050</div>
+        <p class="eco-sub" id="eco-month-sub">10,000 calls/day &times; 30 days</p>
+      </div>
+    </div>
+
+    <p class="eco-insight" id="eco-insight" aria-live="polite"></p>
+  </div>
+
+  <div class="eco-controls">
+    <div class="dg-slider-wrap">
+      <label class="dg-slider-lab" for="eco-prompt">
+        <span>Prompt length <span class="eco-words" id="eco-prompt-words"></span></span>
+        <b id="eco-prompt-val">2,000</b>
+      </label>
+      <input class="dg-slider" id="eco-prompt" type="range"
+        min="200" max="20000" step="100" value="2000"
+        aria-label="Prompt length in input tokens" />
+    </div>
+    <div class="dg-slider-wrap">
+      <label class="dg-slider-lab" for="eco-resp">
+        <span>Answer length <span class="eco-words" id="eco-resp-words"></span></span>
+        <b id="eco-resp-val">500</b>
+      </label>
+      <input class="dg-slider" id="eco-resp" type="range"
+        min="50" max="4000" step="50" value="500"
+        aria-label="Answer length in output tokens" />
+    </div>
+    <div class="eco-seg-wrap">
+      <span>Model tier</span>
+      <div class="dg-seg" id="eco-tier" role="group" aria-label="Model tier">
+        <button type="button" data-tier="0">Small</button>
+        <button type="button" data-tier="1" class="is-on">Mid</button>
+        <button type="button" data-tier="2">Large</button>
+      </div>
+    </div>
+    <div class="eco-seg-wrap">
+      <span>Calls per day</span>
+      <div class="dg-seg" id="eco-vol" role="group" aria-label="Calls per day">
+        <button type="button" data-vol="1000">1k</button>
+        <button type="button" data-vol="10000" class="is-on">10k</button>
+        <button type="button" data-vol="100000">100k</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--accent2)"></i> input (what you send)</span>
+    <span><i class="dg-swatch" style="background:var(--gold)"></i> output (what the model writes)</span>
+    <span>prices are illustrative, per million tokens</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.getElementById('eco');
+  if (!root) return;
+
+  function bump() { if (window.reportDiagramHeight) window.reportDiagramHeight(); }
+
+  // Illustrative prices per MILLION tokens (input, output). Output is priced
+  // several times higher than input, the central fact of token economics.
+  var TIERS = [
+    { name: 'Small tier', in: 0.80, out: 4.00 },
+    { name: 'Mid tier', in: 3.00, out: 15.00 },
+    { name: 'Large tier', in: 15.00, out: 75.00 }
+  ];
+
+  var state = { prompt: 2000, resp: 500, tier: 1, vol: 10000 };
+
+  var els = {
+    tierName: root.querySelector('#eco-tier-name'),
+    inChip: root.querySelector('#eco-in-chip'),
+    outChip: root.querySelector('#eco-out-chip'),
+    mult: root.querySelector('#eco-mult'),
+    eq: root.querySelector('#eco-eq'),
+    inBar: root.querySelector('#eco-in-bar'),
+    inVal: root.querySelector('#eco-in-val'),
+    outBar: root.querySelector('#eco-out-bar'),
+    outVal: root.querySelector('#eco-out-val'),
+    perCall: root.querySelector('#eco-percall'),
+    perCallSub: root.querySelector('#eco-percall-sub'),
+    month: root.querySelector('#eco-month'),
+    monthSub: root.querySelector('#eco-month-sub'),
+    insight: root.querySelector('#eco-insight'),
+    prompt: root.querySelector('#eco-prompt'),
+    promptVal: root.querySelector('#eco-prompt-val'),
+    promptWords: root.querySelector('#eco-prompt-words'),
+    resp: root.querySelector('#eco-resp'),
+    respVal: root.querySelector('#eco-resp-val'),
+    respWords: root.querySelector('#eco-resp-words'),
+    tier: root.querySelector('#eco-tier'),
+    vol: root.querySelector('#eco-vol')
+  };
+
+  function commas(n) { return Math.round(n).toLocaleString('en-US'); }
+  function words(tok) { return commas(tok * 0.75); }
+
+  // money: keep precision for the tiny per-call figures, commas for the bill
+  function money(v) {
+    if (v >= 1) return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (v >= 0.01) return '$' + v.toFixed(4);
+    return '$' + v.toFixed(6);
+  }
+  function bill(v) {
+    if (v >= 100) return '$' + commas(v);
+    return '$' + v.toFixed(2);
+  }
+  function price(v) {
+    return '$' + v.toFixed(2);
+  }
+
+  function update() {
+    var t = TIERS[state.tier];
+    var inCost = (state.prompt / 1e6) * t.in;
+    var outCost = (state.resp / 1e6) * t.out;
+    var perCall = inCost + outCost;
+    var monthly = perCall * state.vol * 30;
+    var mult = Math.round(t.out / t.in);
+
+    // price header
+    els.tierName.textContent = t.name;
+    els.inChip.textContent = 'in ' + price(t.in) + ' /M';
+    els.outChip.textContent = 'out ' + price(t.out) + ' /M';
+    els.mult.textContent = mult + 'x more for output';
+
+    // live equation
+    els.eq.innerHTML =
+      '( <span class="num in">' + commas(state.prompt) + '</span> input &times; ' +
+      '<span class="num">' + price(t.in) + '/M</span> ) &nbsp;+&nbsp; ' +
+      '( <span class="num out">' + commas(state.resp) + '</span> output &times; ' +
+      '<span class="num">' + price(t.out) + '/M</span> ) &nbsp;=&nbsp; ' +
+      '<span class="num eq-total">' + money(perCall) + '</span> per call';
+
+    // cost split bars (scaled to the larger of the two)
+    var maxC = Math.max(inCost, outCost, 1e-9);
+    els.inBar.style.width = ((inCost / maxC) * 100).toFixed(1) + '%';
+    els.outBar.style.width = ((outCost / maxC) * 100).toFixed(1) + '%';
+    els.inVal.textContent = money(inCost);
+    els.outVal.textContent = money(outCost);
+
+    // totals
+    els.perCall.textContent = money(perCall);
+    els.month.textContent = bill(monthly);
+    els.monthSub.textContent = commas(state.vol) + ' calls/day × 30 days';
+
+    // control labels
+    els.promptVal.textContent = commas(state.prompt);
+    els.respVal.textContent = commas(state.resp);
+    els.promptWords.textContent = '(≈ ' + words(state.prompt) + ' words)';
+    els.respWords.textContent = '(≈ ' + words(state.resp) + ' words)';
+
+    // adaptive insight: name the dominant driver, nudge the matching lever
+    var msg;
+    if (outCost >= inCost * 1.25) {
+      msg = '<b>Output is your dominant cost here.</b> Capping the answer length or ' +
+        'dropping to a smaller tier cuts the bill fastest. Trimming the prompt barely helps.';
+    } else if (inCost >= outCost * 1.25) {
+      msg = '<b>Input (your prompt and context) dominates here.</b> Caching the repeated ' +
+        'part or retrieving only the passages you need is the lever that matters.';
+    } else {
+      msg = '<b>Input and output are close.</b> Both are worth watching as volume grows.';
+    }
+    if (state.tier === 2) {
+      var ratio = Math.round(TIERS[2].out / TIERS[0].out);
+      msg += ' The large tier costs about <b>' + ratio + 'x</b> a small model per output token, ' +
+        'so route easy calls down.';
+    }
+    els.insight.innerHTML = msg;
+
+    bump();
+  }
+
+  // sliders
+  els.prompt.addEventListener('input', function () {
+    state.prompt = parseInt(els.prompt.value, 10); update();
+  });
+  els.resp.addEventListener('input', function () {
+    state.resp = parseInt(els.resp.value, 10); update();
+  });
+
+  // segmented toggles
+  function wireSeg(container, attr, cast, apply) {
+    container.addEventListener('click', function (e) {
+      var btn = e.target.closest('button');
+      if (!btn) return;
+      Array.prototype.forEach.call(container.querySelectorAll('button'), function (b) {
+        b.classList.toggle('is-on', b === btn);
+      });
+      apply(cast(btn.getAttribute(attr)));
+      update();
+    });
+  }
+  wireSeg(els.tier, 'data-tier', function (v) { return parseInt(v, 10); }, function (v) { state.tier = v; });
+  wireSeg(els.vol, 'data-vol', function (v) { return parseInt(v, 10); }, function (v) { state.vol = v; });
+
+  update();
+})();
+</script>
+</body>
+</html>

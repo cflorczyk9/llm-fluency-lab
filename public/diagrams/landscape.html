@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="landscape">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The model landscape</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* landscape-only styles */
+  #ls-grid {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 16px;
+    align-items: stretch;
+  }
+  #ls-plot-wrap { min-width: 0; }
+  #ls-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  /* axis + grid */
+  #ls-svg .ax-line { stroke: var(--muted); stroke-width: 1.4; }
+  #ls-svg .ax-grid { stroke: var(--line); stroke-width: 1; }
+  #ls-svg .ax-arrow { fill: var(--muted); }
+  #ls-svg .ax-cap {
+    fill: var(--muted); font-size: 11px; font-weight: 600;
+    font-family: var(--dg-sans);
+  }
+  #ls-svg .ax-cap.is-ink { fill: var(--ink); }
+
+  /* dots */
+  #ls-svg .dot {
+    cursor: pointer;
+    transition: transform 0.14s ease;
+  }
+  #ls-svg .dot .ring {
+    fill: var(--panel);
+    stroke-width: 2.5;
+    transition: stroke-width 0.14s ease, fill 0.14s ease;
+  }
+  #ls-svg .dot.t-closed .ring { stroke: var(--accent2); }
+  #ls-svg .dot.t-open .ring { stroke: var(--gold); }
+  #ls-svg .dot .core {
+    transition: r 0.14s ease;
+  }
+  #ls-svg .dot.t-closed .core { fill: var(--accent2); }
+  #ls-svg .dot.t-open .core { fill: var(--gold); }
+  #ls-svg .dot .lab {
+    font-size: 11px; font-weight: 600; fill: var(--ink);
+    font-family: var(--dg-sans); pointer-events: none;
+  }
+  #ls-svg .dot.is-sel .ring { fill: var(--panel2); stroke-width: 4; }
+  #ls-svg .dot.is-sel .lab { fill: var(--accent2); font-weight: 700; }
+  #ls-svg .dot:hover .ring { stroke-width: 4; }
+  #ls-svg .dot:focus { outline: none; }
+  #ls-svg .dot:focus-visible .ring {
+    stroke: var(--accent); stroke-width: 4;
+  }
+  #ls-svg .dot.is-sel .halo {
+    fill: none; stroke: var(--accent); stroke-width: 1.5; opacity: 0.5;
+  }
+
+  /* detail card */
+  #ls-detail {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  #ls-detail .d-head {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  #ls-detail .d-name {
+    font-size: 15px; font-weight: 700; color: var(--ink); margin: 0;
+  }
+  #ls-detail .d-rows { display: flex; flex-direction: column; gap: 7px; margin: 0; }
+  #ls-detail .d-row { display: flex; gap: 8px; font-size: 12.5px; line-height: 1.4; }
+  #ls-detail .d-row .d-k {
+    flex: 0 0 64px; color: var(--muted); font-weight: 600;
+  }
+  #ls-detail .d-row .d-v { flex: 1 1 auto; color: var(--ink); }
+  #ls-detail .d-trade {
+    font-size: 12px; color: var(--muted); line-height: 1.45;
+    border-top: 1px solid var(--line); padding-top: 9px; margin: 2px 0 0;
+  }
+  #ls-detail .d-trade b { color: var(--gap); font-weight: 700; }
+
+  @media (max-width: 560px) {
+    #ls-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">The model landscape</p>
+    <h1 class="dg-title">One map, two axes</h1>
+  </div>
+  <p class="dg-caption">
+    Every model family sits somewhere on two axes: <b>open</b> (download and run
+    it yourself) to <b>closed</b> (hosted only), and <b>small and fast</b> to
+    <b>frontier</b>. Dot size shows scale. Click a dot to read its spec sheet.
+  </p>
+
+  <div class="dg-stage">
+    <div id="ls-grid">
+      <div id="ls-plot-wrap">
+        <svg id="ls-svg" viewBox="0 0 540 380" role="group"
+          aria-label="Scatter map of model families by openness and capability">
+          <!-- axes + grid injected by script -->
+        </svg>
+      </div>
+      <div id="ls-detail" aria-live="polite">
+        <!-- detail injected by script -->
+      </div>
+    </div>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch is-dot" style="background:var(--accent2)"></i> closed (hosted only)</span>
+    <span><i class="dg-swatch is-dot" style="background:var(--gold)"></i> open weights (run it yourself)</span>
+    <span><i class="dg-swatch is-dot" style="width:16px;height:16px"></i> bigger dot = larger model</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function el(name, attrs) {
+    var n = document.createElementNS(SVGNS, name);
+    if (attrs) for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function bump() { if (window.reportDiagramHeight) window.reportDiagramHeight(); }
+
+  // plot geometry: data x,y in 0..100 -> pixels inside the inset frame
+  var PAD_L = 58, PAD_R = 26, PAD_T = 24, PAD_B = 50;
+  var W = 540, H = 380;
+  var x0 = PAD_L, x1 = W - PAD_R, y0 = H - PAD_B, y1 = PAD_T;
+  function px(x) { return x0 + (x / 100) * (x1 - x0); }
+  function py(y) { return y0 + (y / 100) * (y1 - y0); }
+
+  // Vendor-neutral archetypes (kept evergreen on purpose, like the module).
+  // x: 0 open .. 100 closed; y: 0 small .. 100 frontier; r: relative size.
+  var MODELS = [
+    { id: 'fc', name: 'Frontier closed', type: 'closed', x: 82, y: 88, r: 26,
+      labDx: 0, labDy: -34,
+      size: 'Very large', ctx: 'Long, often 100K to 1M+ tokens',
+      strength: 'Hardest reasoning, nuance, broad knowledge, strongest multimodal',
+      best: 'The toughest open-ended work, where quality is the bottleneck',
+      trade: 'Priciest and slower, and your data leaves your own systems.' },
+    { id: 'mh', name: 'Mid hosted', type: 'closed', x: 73, y: 54, r: 19,
+      labDx: 30, labDy: 4,
+      size: 'Medium', ctx: 'Generous, tens to hundreds of thousands',
+      strength: 'Strong all-rounder at a good price, the everyday workhorse',
+      best: 'Most production tasks that need solid quality without top-tier cost',
+      trade: 'Less peak capability than frontier, and still hosted only.' },
+    { id: 'sh', name: 'Small hosted', type: 'closed', x: 66, y: 20, r: 12,
+      labDx: 26, labDy: 2,
+      size: 'Small', ctx: 'Moderate',
+      strength: 'Very fast and very cheap per call',
+      best: 'High-volume, well-defined jobs: classification, extraction, short replies',
+      trade: 'Struggles on hard multi-step reasoning, and still hosted.' },
+    { id: 'fo', name: 'Frontier open-weight', type: 'open', x: 21, y: 78, r: 23,
+      labDx: 0, labDy: -32,
+      size: 'Large', ctx: 'Long and growing',
+      strength: 'Top-tier capability you can run yourself, with full data control',
+      best: 'When data must stay on your systems but you still need strong quality',
+      trade: 'You run the hardware, and the license may limit commercial use.' },
+    { id: 'mo', name: 'Mid open-weight', type: 'open', x: 31, y: 47, r: 17,
+      labDx: -8, labDy: 30,
+      size: 'Medium', ctx: 'Moderate to long',
+      strength: 'Strong, cheap to run at scale, and easy to fine-tune',
+      best: 'Customization and predictable cost at high volume',
+      trade: 'Setup and operations are on you, so check the license first.' },
+    { id: 'so', name: 'Small open / local', type: 'open', x: 22, y: 17, r: 11,
+      labDx: 4, labDy: 26,
+      size: 'Small (runs on a laptop or single GPU)', ctx: 'Modest',
+      strength: 'Private, offline-capable, and nearly free to run',
+      best: 'On-device, privacy-sensitive, or offline tasks',
+      trade: 'Limited capability, and you handle everything yourself.' }
+  ];
+
+  var svg = root.querySelector('#ls-svg');
+  var detail = root.querySelector('#ls-detail');
+
+  // ---- axes, grid, captions ----
+  function buildAxes() {
+    // light interior grid
+    [25, 50, 75].forEach(function (g) {
+      svg.appendChild(el('line', { 'class': 'ax-grid', x1: px(g), y1: py(0), x2: px(g), y2: py(100) }));
+      svg.appendChild(el('line', { 'class': 'ax-grid', x1: px(0), y1: py(g), x2: px(100), y2: py(g) }));
+    });
+    // main axes (left + bottom border of plot)
+    svg.appendChild(el('line', { 'class': 'ax-line', x1: px(0), y1: py(0), x2: px(100), y2: py(0) }));
+    svg.appendChild(el('line', { 'class': 'ax-line', x1: px(0), y1: py(0), x2: px(0), y2: py(100) }));
+    // arrowheads
+    var ax = px(100), ay = py(0);
+    svg.appendChild(el('polygon', { 'class': 'ax-arrow', points: (ax + 8) + ',' + ay + ' ' + ax + ',' + (ay - 4) + ' ' + ax + ',' + (ay + 4) }));
+    var bx = px(0), by = py(100);
+    svg.appendChild(el('polygon', { 'class': 'ax-arrow', points: bx + ',' + (by - 8) + ' ' + (bx - 4) + ',' + by + ' ' + (bx + 4) + ',' + by }));
+
+    // x-axis captions (open -> closed)
+    var xc = el('text', { 'class': 'ax-cap is-ink', x: px(0), y: H - 28, 'text-anchor': 'start' });
+    xc.textContent = 'Open weights';
+    svg.appendChild(xc);
+    var xc2 = el('text', { 'class': 'ax-cap', x: px(0), y: H - 14, 'text-anchor': 'start' });
+    xc2.textContent = 'run it yourself';
+    svg.appendChild(xc2);
+    var xr = el('text', { 'class': 'ax-cap is-ink', x: px(100), y: H - 28, 'text-anchor': 'end' });
+    xr.textContent = 'Closed';
+    svg.appendChild(xr);
+    var xr2 = el('text', { 'class': 'ax-cap', x: px(100), y: H - 14, 'text-anchor': 'end' });
+    xr2.textContent = 'hosted only';
+    svg.appendChild(xr2);
+
+    // y-axis captions (small bottom -> frontier top), rotated
+    var yt = el('text', { 'class': 'ax-cap is-ink', x: 16, y: py(100) + 4, 'text-anchor': 'start', transform: 'rotate(-90 16 ' + (py(100) + 4) + ')' });
+    yt.textContent = 'Frontier';
+    svg.appendChild(yt);
+    var yb = el('text', { 'class': 'ax-cap', x: 16, y: py(0), 'text-anchor': 'end', transform: 'rotate(-90 16 ' + py(0) + ')' });
+    yb.textContent = 'Small / fast';
+    svg.appendChild(yb);
+  }
+
+  // ---- dots ----
+  var dotEls = {};
+  function buildDots() {
+    MODELS.forEach(function (m, idx) {
+      var g = el('g', {
+        'class': 'dot t-' + m.type,
+        tabindex: '0',
+        role: 'button',
+        'aria-label': m.name + ', ' + (m.type === 'open' ? 'open weight' : 'closed') + ' model. Click for its spec sheet.'
+      });
+      g.appendChild(el('circle', { 'class': 'halo', cx: px(m.x), cy: py(m.y), r: m.r + 7 }));
+      g.appendChild(el('circle', { 'class': 'ring', cx: px(m.x), cy: py(m.y), r: m.r }));
+      g.appendChild(el('circle', { 'class': 'core', cx: px(m.x), cy: py(m.y), r: Math.max(3, m.r * 0.34) }));
+      var t = el('text', {
+        'class': 'lab',
+        x: px(m.x) + (m.labDx || 0),
+        y: py(m.y) + (m.labDy || 0),
+        'text-anchor': m.labDx > 6 ? 'start' : (m.labDx < -6 ? 'end' : 'middle')
+      });
+      t.textContent = m.name;
+      g.appendChild(t);
+
+      if (!reduce) {
+        g.style.opacity = '0';
+        g.style.transition = 'opacity 0.3s ease';
+        setTimeout(function () { g.style.opacity = '1'; }, 80 + idx * 70);
+      }
+
+      function pick() { select(m.id); }
+      g.addEventListener('click', pick);
+      g.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+          e.preventDefault();
+          pick();
+        }
+      });
+      svg.appendChild(g);
+      dotEls[m.id] = g;
+    });
+  }
+
+  function badge(type) {
+    if (type === 'open') {
+      return '<span class="dg-badge is-gold">Open weights</span>';
+    }
+    return '<span class="dg-badge">Closed / hosted</span>';
+  }
+
+  function renderDetail(m) {
+    detail.innerHTML =
+      '<div class="d-head">' +
+        '<p class="d-name">' + m.name + '</p>' + badge(m.type) +
+      '</div>' +
+      '<div class="d-rows">' +
+        '<div class="d-row"><span class="d-k">Size</span><span class="d-v">' + m.size + '</span></div>' +
+        '<div class="d-row"><span class="d-k">Context</span><span class="d-v">' + m.ctx + '</span></div>' +
+        '<div class="d-row"><span class="d-k">Strengths</span><span class="d-v">' + m.strength + '</span></div>' +
+        '<div class="d-row"><span class="d-k">Best for</span><span class="d-v">' + m.best + '</span></div>' +
+      '</div>' +
+      '<p class="d-trade"><b>Trade-off:</b> ' + m.trade + '</p>';
+  }
+
+  var reduce = false;
+  try {
+    reduce = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {}
+
+  var selId = null;
+  function select(id) {
+    selId = id;
+    var m = null;
+    MODELS.forEach(function (mm) {
+      var on = mm.id === id;
+      if (on) m = mm;
+      if (dotEls[mm.id]) dotEls[mm.id].classList.toggle('is-sel', on);
+    });
+    if (m) renderDetail(m);
+    bump();
+  }
+
+  buildAxes();
+  buildDots();
+  // default-select the everyday pick so the panel is never empty
+  select('mh');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="multiagent">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Three ways to wire a team of agents</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* multiagent-only styles */
+  #ma-stage { padding-top: 16px; }
+  #ma-svg {
+    width: 100%;
+    height: auto;
+    max-height: 260px;
+    display: block;
+    overflow: visible;
+  }
+  .ma-edge {
+    stroke: var(--accent2);
+    stroke-width: 2;
+    opacity: 0.32;
+    fill: none;
+  }
+  .ma-arrow { fill: var(--accent2); opacity: 0.55; }
+  .ma-rect {
+    fill: var(--panel);
+    stroke: var(--line);
+    stroke-width: 1.5;
+    rx: 10;
+  }
+  .ma-rect.lead { fill: var(--accent); stroke: var(--accent2); }
+  .ma-rect.merge { fill: var(--panel); stroke: var(--gold); stroke-width: 2; }
+  .ma-rect.soft { fill: var(--panel2); stroke: var(--line); }
+  .ma-t {
+    font-family: var(--dg-sans);
+    font-size: 13px;
+    font-weight: 650;
+    fill: var(--ink);
+    text-anchor: middle;
+  }
+  .ma-t.onaccent { fill: #fff; }
+  .ma-t.ongold { fill: var(--gold); }
+  .ma-s {
+    font-family: var(--dg-sans);
+    font-size: 10.5px;
+    fill: var(--muted);
+    text-anchor: middle;
+  }
+  .ma-s.onaccent { fill: rgba(255,255,255,0.88); }
+  .ma-dot-out { fill: var(--accent); }
+  .ma-dot-in { fill: var(--gold); }
+  .ma-dot-ring { fill: var(--panel); }
+
+  #ma-info { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ma-stat {
+    flex: 1 1 150px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 11px;
+  }
+  .ma-stat .k {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 3px;
+  }
+  .ma-stat .v {
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--ink);
+    margin: 0;
+  }
+  .ma-watch {
+    flex: 1 1 100%;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--gap);
+    border-radius: 8px;
+    padding: 8px 11px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+  .ma-watch b { color: var(--gap); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Multi-agent &amp; Orchestration</p>
+    <h1 class="dg-title">Three ways to wire a team of agents</h1>
+  </div>
+  <p class="dg-caption">
+    The same job, three topologies. Switch the pattern to redraw the graph and watch the
+    work flow: the dots show what runs <b>one after another</b> versus what runs <b>at the same time</b>.
+    Each shape buys you something and costs you something.
+  </p>
+
+  <div class="dg-controls">
+    <div class="dg-seg" role="group" aria-label="Choose a coordination pattern">
+      <button type="button" data-pat="pipeline" class="is-on" aria-pressed="true">Pipeline</button>
+      <button type="button" data-pat="orchestrator" aria-pressed="false">Orchestrator-worker</button>
+      <button type="button" data-pat="debate" aria-pressed="false">Debate</button>
+    </div>
+    <button class="dg-btn" id="ma-play" type="button" aria-pressed="true" aria-label="Pause the flow animation">Pause flow</button>
+  </div>
+
+  <div class="dg-stage" id="ma-stage">
+    <svg id="ma-svg" viewBox="0 0 680 240" preserveAspectRatio="xMidYMid meet" role="img"
+      aria-label="A diagram of the chosen multi-agent topology with task, agents, and a merge step">
+      <defs>
+        <marker id="ma-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path class="ma-arrow" d="M0,0 L10,5 L0,10 z" />
+        </marker>
+      </defs>
+      <g id="ma-edges"></g>
+      <g id="ma-nodes"></g>
+      <g id="ma-dots"></g>
+    </svg>
+  </div>
+
+  <div id="ma-info" aria-live="polite"></div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--accent)"></i> lead / agent dispatched</span>
+    <span><i class="dg-swatch is-dot" style="background:var(--gold)"></i> result coming back to merge</span>
+    <span><i class="dg-swatch is-line" style="background:var(--accent2);opacity:0.5"></i> handoff between agents</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+  var SVGNS = 'http://www.w3.org/2000/svg';
+
+  // ---- pattern definitions: nodes + edges in a 680x240 viewBox ----
+  var PATTERNS = {
+    pipeline: {
+      nodes: [
+        { id: 'task', x: 8,   y: 92, w: 84,  h: 56, t: 'Task',     s: 'the goal', kind: 'soft' },
+        { id: 'a',    x: 132, y: 92, w: 108, h: 56, t: 'Research', s: 'gather',   kind: 'worker' },
+        { id: 'b',    x: 286, y: 92, w: 108, h: 56, t: 'Draft',    s: 'write',    kind: 'worker' },
+        { id: 'c',    x: 440, y: 92, w: 108, h: 56, t: 'Edit',     s: 'polish',   kind: 'worker' },
+        { id: 'done', x: 588, y: 92, w: 84,  h: 56, t: 'Done',     s: 'output',   kind: 'soft' }
+      ],
+      edges: [
+        { from: 'task', to: 'a', type: 'right', seq: 0 },
+        { from: 'a', to: 'b', type: 'right', seq: 1 },
+        { from: 'b', to: 'c', type: 'right', seq: 2 },
+        { from: 'c', to: 'done', type: 'right', seq: 3 }
+      ],
+      mode: 'serial',
+      info: {
+        flow: 'Sequential, fixed order',
+        cost: 'About 3 agents, run one after another. You hard-code the order.',
+        best: 'Fixed multi-step jobs where each step feeds the next.',
+        watch: 'An early mistake is passed downstream as fact: <b>error propagation</b>. The chain is only as fast as its slowest link.'
+      }
+    },
+    orchestrator: {
+      nodes: [
+        { id: 'lead', x: 288, y: 8,   w: 104, h: 52, t: 'Orchestrator', s: 'plans + merges', kind: 'lead' },
+        { id: 'w1',   x: 40,  y: 104, w: 140, h: 52, t: 'Worker',  s: 'find data',  kind: 'worker' },
+        { id: 'w2',   x: 270, y: 104, w: 140, h: 52, t: 'Worker',  s: 'write code', kind: 'worker' },
+        { id: 'w3',   x: 500, y: 104, w: 140, h: 52, t: 'Worker',  s: 'draft copy', kind: 'worker' },
+        { id: 'res',  x: 270, y: 190, w: 140, h: 42, t: 'Merged answer', s: '', kind: 'soft' }
+      ],
+      edges: [
+        { from: 'lead', to: 'w1', type: 'down', phase: 'out' },
+        { from: 'lead', to: 'w2', type: 'down', phase: 'out' },
+        { from: 'lead', to: 'w3', type: 'down', phase: 'out' },
+        { from: 'w1', to: 'res', type: 'down', phase: 'in' },
+        { from: 'w2', to: 'res', type: 'down', phase: 'in' },
+        { from: 'w3', to: 'res', type: 'down', phase: 'in' }
+      ],
+      mode: 'parallel',
+      info: {
+        flow: 'Parallel workers, one lead',
+        cost: 'About 4 agents (lead plus 3 workers). Independent slices run at the same time.',
+        best: 'One big goal that splits into different, independent skills.',
+        watch: 'Each worker only sees the slice it was handed. A gap in the briefing becomes a real <b>handoff</b> bug.'
+      }
+    },
+    debate: {
+      nodes: [
+        { id: 'task', x: 288, y: 8,   w: 104, h: 44, t: 'Hard question', s: '', kind: 'soft' },
+        { id: 'a1',   x: 40,  y: 96,  w: 140, h: 52, t: 'Agent 1', s: 'same question', kind: 'worker' },
+        { id: 'a2',   x: 270, y: 96,  w: 140, h: 52, t: 'Agent 2', s: 'same question', kind: 'worker' },
+        { id: 'a3',   x: 500, y: 96,  w: 140, h: 52, t: 'Agent 3', s: 'same question', kind: 'worker' },
+        { id: 'judge',x: 255, y: 188, w: 170, h: 44, t: 'Compare + vote', s: '', kind: 'merge' }
+      ],
+      edges: [
+        { from: 'task', to: 'a1', type: 'down', phase: 'out' },
+        { from: 'task', to: 'a2', type: 'down', phase: 'out' },
+        { from: 'task', to: 'a3', type: 'down', phase: 'out' },
+        { from: 'a1', to: 'judge', type: 'down', phase: 'in' },
+        { from: 'a2', to: 'judge', type: 'down', phase: 'in' },
+        { from: 'a3', to: 'judge', type: 'down', phase: 'in' }
+      ],
+      mode: 'parallel',
+      info: {
+        flow: 'Parallel, then vote',
+        cost: 'About 3 agents on the SAME question, plus a judge to reconcile.',
+        best: 'High-stakes questions where one wrong answer is costly.',
+        watch: 'Roughly <b>3x the tokens</b> for a single answer. Independent tries rarely fail the same way, which is the point.'
+      }
+    }
+  };
+
+  var nodesG = root.querySelector('#ma-nodes');
+  var edgesG = root.querySelector('#ma-edges');
+  var dotsG  = root.querySelector('#ma-dots');
+  var infoEl = root.querySelector('#ma-info');
+  var segBtns = Array.prototype.slice.call(root.querySelectorAll('[data-pat]'));
+  var playBtn = root.querySelector('#ma-play');
+
+  var current = 'pipeline';
+  var nodeMap = {};
+  var edgeGeo = [];
+
+  var reduceMotion = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var playing = !reduceMotion;
+
+  function el(name, attrs) {
+    var e = document.createElementNS(SVGNS, name);
+    for (var k in attrs) { if (attrs.hasOwnProperty(k)) e.setAttribute(k, attrs[k]); }
+    return e;
+  }
+
+  // anchor points for an edge given its type
+  function anchors(s, t, type) {
+    if (type === 'right') {
+      return {
+        p0: { x: s.x + s.w, y: s.y + s.h / 2 },
+        p1: { x: t.x,       y: t.y + t.h / 2 }
+      };
+    }
+    // 'down'
+    return {
+      p0: { x: s.x + s.w / 2, y: s.y + s.h },
+      p1: { x: t.x + t.w / 2, y: t.y }
+    };
+  }
+
+  function lerp(geo, u) {
+    return {
+      x: geo.p0.x + (geo.p1.x - geo.p0.x) * u,
+      y: geo.p0.y + (geo.p1.y - geo.p0.y) * u
+    };
+  }
+
+  function buildPattern(key) {
+    var P = PATTERNS[key];
+    nodeMap = {};
+    edgeGeo = [];
+    nodesG.innerHTML = '';
+    edgesG.innerHTML = '';
+    dotsG.innerHTML = '';
+
+    P.nodes.forEach(function (n) { nodeMap[n.id] = n; });
+
+    // edges (drawn first, under nodes)
+    P.edges.forEach(function (e) {
+      var s = nodeMap[e.from], t = nodeMap[e.to];
+      var a = anchors(s, t, e.type);
+      // stop the line a touch short so the arrowhead sits on the node edge
+      var line = el('line', {
+        x1: a.p0.x, y1: a.p0.y, x2: a.p1.x, y2: a.p1.y,
+        'class': 'ma-edge', 'marker-end': 'url(#ma-ah)'
+      });
+      edgesG.appendChild(line);
+      edgeGeo.push({ geo: a, seq: e.seq, phase: e.phase });
+    });
+
+    // nodes
+    P.nodes.forEach(function (n) {
+      var kindClass = n.kind === 'lead' ? 'lead'
+        : n.kind === 'merge' ? 'merge'
+        : n.kind === 'soft' ? 'soft' : '';
+      var rect = el('rect', {
+        x: n.x, y: n.y, width: n.w, height: n.h, rx: 10,
+        'class': 'ma-rect ' + kindClass
+      });
+      nodesG.appendChild(rect);
+
+      var cx = n.x + n.w / 2;
+      var hasSub = !!n.s;
+      var onAccent = n.kind === 'lead';
+      var title = el('text', {
+        x: cx, y: n.y + n.h / 2 + (hasSub ? -2 : 4),
+        'class': 'ma-t' + (onAccent ? ' onaccent' : (n.kind === 'merge' ? ' ongold' : ''))
+      });
+      title.textContent = n.t;
+      nodesG.appendChild(title);
+
+      if (hasSub) {
+        var sub = el('text', {
+          x: cx, y: n.y + n.h / 2 + 13,
+          'class': 'ma-s' + (onAccent ? ' onaccent' : '')
+        });
+        sub.textContent = n.s;
+        nodesG.appendChild(sub);
+      }
+    });
+
+    // info card
+    infoEl.innerHTML = '';
+    var stats = [
+      { k: 'Flow', v: P.info.flow },
+      { k: 'Cost', v: P.info.cost },
+      { k: 'Best for', v: P.info.best }
+    ];
+    stats.forEach(function (st) {
+      var d = document.createElement('div');
+      d.className = 'ma-stat';
+      d.innerHTML = '<p class="k">' + st.k + '</p><p class="v">' + st.v + '</p>';
+      infoEl.appendChild(d);
+    });
+    var w = document.createElement('div');
+    w.className = 'ma-watch';
+    w.innerHTML = '<b>Watch out:</b> ' + P.info.watch;
+    infoEl.appendChild(w);
+
+    current = key;
+    drawDots(reduceMotion ? 0.34 : tNow);
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  // ---- flowing dots ----
+  function dotPositions(key, t) {
+    var P = PATTERNS[key];
+    var out = [];
+    if (P.mode === 'serial') {
+      var n = edgeGeo.length;
+      var pos = t * n;
+      var idx = Math.min(Math.floor(pos), n - 1);
+      var u = pos - idx;
+      out.push({ p: lerp(edgeGeo[idx].geo, u), kind: 'out' });
+    } else {
+      var outE = edgeGeo.filter(function (e) { return e.phase === 'out'; });
+      var inE = edgeGeo.filter(function (e) { return e.phase === 'in'; });
+      if (t < 0.5) {
+        var u1 = t * 2;
+        outE.forEach(function (e) { out.push({ p: lerp(e.geo, u1), kind: 'out' }); });
+      } else {
+        var u2 = (t - 0.5) * 2;
+        inE.forEach(function (e) { out.push({ p: lerp(e.geo, u2), kind: 'in' }); });
+      }
+    }
+    return out;
+  }
+
+  function drawDots(t) {
+    dotsG.innerHTML = '';
+    var pts = dotPositions(current, t);
+    pts.forEach(function (d) {
+      dotsG.appendChild(el('circle', {
+        cx: d.p.x, cy: d.p.y, r: 6.5, 'class': 'ma-dot-ring'
+      }));
+      dotsG.appendChild(el('circle', {
+        cx: d.p.x, cy: d.p.y, r: 4.5,
+        'class': d.kind === 'in' ? 'ma-dot-in' : 'ma-dot-out'
+      }));
+    });
+  }
+
+  // ---- animation loop ----
+  var tNow = 0;
+  var last = 0;
+  var PERIOD = 3400; // ms per full cycle
+  function frame(ts) {
+    if (!playing) return;
+    if (!last) last = ts;
+    var dt = ts - last;
+    last = ts;
+    tNow = (tNow + dt / PERIOD) % 1;
+    drawDots(tNow);
+    requestAnimationFrame(frame);
+  }
+  function startLoop() {
+    if (reduceMotion) return;
+    last = 0;
+    requestAnimationFrame(frame);
+  }
+
+  // ---- controls ----
+  segBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      segBtns.forEach(function (o) {
+        var on = o === b;
+        o.classList.toggle('is-on', on);
+        o.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      buildPattern(b.getAttribute('data-pat'));
+    });
+  });
+
+  playBtn.addEventListener('click', function () {
+    playing = !playing;
+    playBtn.textContent = playing ? 'Pause flow' : 'Play flow';
+    playBtn.setAttribute('aria-pressed', playing ? 'true' : 'false');
+    playBtn.setAttribute('aria-label',
+      playing ? 'Pause the flow animation' : 'Play the flow animation');
+    if (playing) startLoop();
+  });
+
+  if (reduceMotion) {
+    playing = false;
+    playBtn.textContent = 'Play flow';
+    playBtn.setAttribute('aria-pressed', 'false');
+  }
+
+  buildPattern('pipeline');
+  startLoop();
+})();
+</script>
+</body>
+</html>

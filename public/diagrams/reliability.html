@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="reliability">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Same prompt, six runs: hardening a flaky result</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* reliability-only: the six-run grid and the hardening controls */
+  .rl-schema {
+    font-family: var(--dg-mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 6px 10px;
+    margin: 0 0 14px;
+    line-height: 1.5;
+  }
+  .rl-schema b { color: var(--ink); font-weight: 600; }
+
+  .rl-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .rl-card {
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    background: var(--panel);
+    box-shadow: var(--dg-shadow);
+    padding: 9px 11px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .rl-card .rl-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .rl-run {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .rl-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+    border: 1px solid var(--line);
+  }
+  .rl-chip.is-valid    { color: var(--accent2); border-color: var(--accent2); background: #fff; }
+  .rl-chip.is-repaired { color: var(--gold);    border-color: var(--gold);    background: #fff; }
+  .rl-chip.is-rejected { color: var(--gap);     border-color: var(--gap);     background: #fff; }
+  .rl-chip.is-unchecked{ color: var(--gap);     border-color: var(--gap);     background: #fff; border-style: dashed; }
+  .rl-chip.is-review   { color: var(--gold);    border-color: var(--gold);    background: rgba(217,119,6,0.10); }
+
+  .rl-out {
+    font-family: var(--dg-mono);
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 6px 8px;
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 30px;
+  }
+  .rl-note {
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* outline cue per status on the whole card */
+  .rl-card.s-valid    { border-color: rgba(11,83,148,0.45); }
+  .rl-card.s-repaired { border-color: rgba(217,119,6,0.5); }
+  .rl-card.s-rejected,
+  .rl-card.s-unchecked{ border-color: rgba(220,38,38,0.45); }
+  .rl-card.s-review   { border-color: rgba(217,119,6,0.6); box-shadow: 0 0 0 1px rgba(217,119,6,0.35); }
+
+  .rl-summary {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--muted);
+    margin: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 11px;
+  }
+  .rl-summary b { color: var(--ink); font-weight: 600; }
+  .rl-tally {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent2);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rl-toggle-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .rl-toglab {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 2px;
+  }
+  .dg-btn[aria-pressed="true"] {
+    border-color: var(--accent);
+    color: var(--accent2);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .dg-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  @media (max-width: 620px) {
+    .rl-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 400px) {
+    .rl-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Reliability and guardrails</p>
+    <h1 class="dg-title">Same prompt, six runs: making it stabilize</h1>
+  </div>
+  <p class="dg-caption">
+    One prompt, run six times, asking the model to extract a refund as JSON. Raw, it scatters: wording
+    drifts, some answers are malformed, one is <b>fluent but wrong</b>. Flip the hardening levers and watch it
+    settle, then notice the one error no lever fixes.
+  </p>
+
+  <div class="dg-controls rl-toggle-row" role="group" aria-label="Hardening controls">
+    <span class="rl-toglab">Temperature</span>
+    <div class="dg-seg" role="group" aria-label="Temperature">
+      <button id="rl-temp-hi" class="is-on" type="button" aria-pressed="true">High</button>
+      <button id="rl-temp-lo" type="button" aria-pressed="false">Low (approx 0)</button>
+    </div>
+    <button id="rl-validate" class="dg-btn" type="button" aria-pressed="false"
+      aria-label="Toggle output validation against the schema">Validate output</button>
+    <button id="rl-retry" class="dg-btn" type="button" aria-pressed="false" disabled
+      aria-label="Toggle retry and repair on a failed validation">Retry and repair</button>
+    <button id="rl-run" class="dg-btn is-primary" type="button"
+      aria-label="Run the same prompt six more times">Run again</button>
+  </div>
+
+  <div class="dg-stage">
+    <p class="rl-schema">schema: <b>category</b> in {refund, exchange, cancel}, <b>amount</b> = a number</p>
+    <div class="rl-grid" id="rl-grid" aria-live="polite"></div>
+  </div>
+
+  <p class="rl-summary" id="rl-summary" aria-live="polite"></p>
+
+  <div class="dg-legend" aria-hidden="true">
+    <span><i class="dg-swatch is-dot" style="background:var(--accent2)"></i> valid</span>
+    <span><i class="dg-swatch is-dot" style="background:var(--gold)"></i> repaired / needs review</span>
+    <span><i class="dg-swatch is-dot" style="background:var(--gap)"></i> rejected or unchecked</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var CANON = '{"category":"refund","amount":42.00}';
+  var GOOD_VARIANTS = [
+    '{ "category": "refund", "amount": 42.0 }',
+    '{"amount": 42.0, "category": "refund"}',
+    '{ "category" : "refund", "amount" : 42 }'
+  ];
+  var MAL_VARIANTS = [
+    'Sure, that is a refund for $42.00.',
+    'Refund request, amount $42.',
+    'The refund comes to 42 dollars.'
+  ];
+  var MAL_LOW = 'A refund of $42.00.';
+  var OFF_HIGH = '{"category":"return","amount":42.0}';
+  var OFF_LOW  = '{"category":"return","amount":42.00}';
+  var HALL = '{"category":"refund","amount":24.00}';
+
+  // index, type. 3 good, 1 malformed, 1 off-envelope, 1 hallucination.
+  var RUNS = ['good', 'malformed', 'good', 'offscope', 'good', 'halluc'];
+
+  var state = { lowTemp: false, validate: false, retry: false, seed: 0 };
+
+  var gridEl = root.querySelector('#rl-grid');
+  var summaryEl = root.querySelector('#rl-summary');
+  var tempHi = root.querySelector('#rl-temp-hi');
+  var tempLo = root.querySelector('#rl-temp-lo');
+  var btnValidate = root.querySelector('#rl-validate');
+  var btnRetry = root.querySelector('#rl-retry');
+  var btnRun = root.querySelector('#rl-run');
+
+  function pick(arr, idx) { return arr[(idx + state.seed) % arr.length]; }
+
+  function cardData(type, idx) {
+    var lowTemp = state.lowTemp, validate = state.validate, retry = state.retry;
+    if (type === 'good') {
+      return {
+        text: lowTemp ? CANON : pick(GOOD_VARIANTS, idx),
+        chip: 'Valid', cls: 'valid', note: 'parses to the schema'
+      };
+    }
+    if (type === 'malformed' || type === 'offscope') {
+      var high = type === 'malformed' ? pick(MAL_VARIANTS, idx) : OFF_HIGH;
+      var low  = type === 'malformed' ? MAL_LOW : OFF_LOW;
+      var raw = lowTemp ? low : high;
+      var why = type === 'malformed' ? 'malformed text' : 'category off the allowed list';
+      if (!validate) {
+        return { text: raw, chip: 'Unchecked', cls: 'unchecked', note: 'no check: ' + why + ' ships downstream' };
+      }
+      if (!retry) {
+        return { text: raw, chip: 'Rejected', cls: 'rejected', note: 'fails the schema check, safe fallback returned' };
+      }
+      var repNote = type === 'malformed' ? 'retried with a stricter prompt, now valid' : 'retried, mapped to an allowed value';
+      return { text: CANON, chip: 'Repaired', cls: 'repaired', note: repNote };
+    }
+    // hallucination: valid shape, wrong number. Neither lever fixes it.
+    if (!validate) {
+      return { text: HALL, chip: 'Unchecked', cls: 'unchecked', note: 'no check: a confidently wrong value ships' };
+    }
+    return { text: HALL, chip: 'Fluent but wrong', cls: 'review', note: 'valid shape, passes the check, but the amount is wrong (should be 42.00)' };
+  }
+
+  function render() {
+    gridEl.innerHTML = '';
+    RUNS.forEach(function (type, idx) {
+      var d = cardData(type, idx);
+      var card = document.createElement('div');
+      card.className = 'rl-card s-' + d.cls;
+      card.innerHTML =
+        '<div class="rl-head">' +
+          '<span class="rl-run">Run ' + (idx + 1) + '</span>' +
+          '<span class="rl-chip is-' + d.cls + '">' + d.chip + '</span>' +
+        '</div>' +
+        '<pre class="rl-out">' + escapeHtml(d.text) + '</pre>' +
+        '<p class="rl-note">' + d.note + '</p>';
+      gridEl.appendChild(card);
+    });
+    renderSummary();
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  function renderSummary() {
+    var lowTemp = state.lowTemp, validate = state.validate, retry = state.retry;
+    // well-formed-and-correct count: 3 good + (2 repaired when validate+retry)
+    var good = 3;
+    var fixed = (validate && retry) ? 2 : 0;
+    var correct = good + fixed;
+    var msg;
+    if (!validate) {
+      msg = 'No output check, so <b>every run ships as written</b>: two are malformed and one is confidently wrong. ' +
+        (lowTemp
+          ? 'Low temperature made the wording repeatable, but repeatable is not the same as correct.'
+          : 'High temperature also reshuffles the wording on each run.');
+    } else if (!retry) {
+      msg = 'Validation <b>rejects the two malformed runs</b> and returns a safe fallback instead of a broken answer. ' +
+        'The fluent-but-wrong run has a valid shape, so it passes.' +
+        (lowTemp ? ' The good runs now read identically.' : '');
+    } else {
+      msg = '<b>Hardened.</b> Malformed runs are repaired and re-validated, and ' +
+        (lowTemp ? 'low temperature keeps the good runs identical. ' : 'the good runs differ only in wording. ') +
+        'One answer still passes every check yet is wrong: only logging, monitoring, and human review catch that.';
+    }
+    summaryEl.innerHTML =
+      '<span class="rl-tally">valid and correct: ' + correct + ' / 6</span> &nbsp; ' + msg;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function setTemp(low) {
+    state.lowTemp = low;
+    tempHi.classList.toggle('is-on', !low);
+    tempLo.classList.toggle('is-on', low);
+    tempHi.setAttribute('aria-pressed', String(!low));
+    tempLo.setAttribute('aria-pressed', String(low));
+    render();
+  }
+
+  function syncRetryEnabled() {
+    btnRetry.disabled = !state.validate;
+    if (!state.validate && state.retry) {
+      state.retry = false;
+      btnRetry.setAttribute('aria-pressed', 'false');
+    }
+  }
+
+  tempHi.addEventListener('click', function () { setTemp(false); });
+  tempLo.addEventListener('click', function () { setTemp(true); });
+
+  btnValidate.addEventListener('click', function () {
+    state.validate = !state.validate;
+    btnValidate.setAttribute('aria-pressed', String(state.validate));
+    syncRetryEnabled();
+    render();
+  });
+
+  btnRetry.addEventListener('click', function () {
+    if (btnRetry.disabled) return;
+    state.retry = !state.retry;
+    btnRetry.setAttribute('aria-pressed', String(state.retry));
+    render();
+  });
+
+  btnRun.addEventListener('click', function () {
+    // re-running reshuffles wording at high temperature (non-determinism);
+    // at low temperature the output is the same every time.
+    state.seed = (state.seed + 1) % 3;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

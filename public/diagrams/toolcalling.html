@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="toolcalling">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The tool-calling loop, step by step</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* toolcalling-only: the round-trip schematic and the growing message thread */
+  .tc-loop {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .tc-actor {
+    flex: 1 1 130px;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    background: var(--panel);
+    box-shadow: var(--dg-shadow);
+    padding: 10px 8px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  }
+  .tc-actor .a-title { font-size: 13.5px; font-weight: 650; }
+  .tc-actor .a-sub { font-size: 11px; color: var(--muted); }
+  .tc-actor.is-on {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 14px rgba(28, 29, 31, 0.1);
+  }
+  .tc-arrows {
+    flex: 0 0 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .tc-arrow {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    transition: color 0.18s ease;
+  }
+  .tc-arrow .ln { flex: 1; height: 2px; background: var(--line); position: relative; }
+  .tc-arrow.to-r .ln::after,
+  .tc-arrow.to-l .ln::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+  }
+  .tc-arrow.to-r .ln::after { right: -1px; border-left: 6px solid var(--line); }
+  .tc-arrow.to-l { flex-direction: row-reverse; }
+  .tc-arrow.to-l .ln::after { left: -1px; border-right: 6px solid var(--line); }
+  .tc-arrow.is-on { color: var(--accent2); }
+  .tc-arrow.is-on .ln { background: var(--accent); }
+  .tc-arrow.to-r.is-on .ln::after { border-left-color: var(--accent); }
+  .tc-arrow.to-l.is-on .ln::after { border-right-color: var(--accent); }
+
+  .tc-cap {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0;
+    min-height: 38px;
+  }
+  .tc-cap b { color: var(--ink); font-weight: 600; }
+
+  .tc-thread { display: flex; flex-direction: column; gap: 9px; }
+  .tc-msg {
+    border: 1px solid var(--line);
+    border-left-width: 3px;
+    border-radius: 10px;
+    padding: 9px 12px;
+    background: var(--panel);
+    box-shadow: var(--dg-shadow);
+  }
+  .tc-msg.anim { opacity: 0; transform: translateY(6px); transition: opacity 0.28s ease, transform 0.28s ease; }
+  .tc-msg.anim.is-in { opacity: 1; transform: none; }
+  .tc-msg.r-user   { border-left-color: var(--muted); }
+  .tc-msg.r-call   { border-left-color: var(--accent); }
+  .tc-msg.r-result { border-left-color: var(--gold); }
+  .tc-msg.r-final  { border-left-color: var(--accent2); }
+  .tc-msg .role {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tc-msg .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .tc-msg .body { font-size: 13px; color: var(--ink); line-height: 1.45; }
+  .tc-msg .json {
+    font-family: var(--dg-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 7px 10px;
+    margin: 2px 0 0;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .tc-msg .mnote { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
+  .tc-msg .mnote b { color: var(--ink); font-weight: 600; }
+
+  .tc-bottom { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .tc-prog { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tc-msg.anim { opacity: 1; transform: none; transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Tool calling</p>
+    <h1 class="dg-title">The model proposes, your code executes</h1>
+  </div>
+  <p class="dg-caption">
+    A tool call is a round trip, not one step. The model emits a structured JSON
+    request, <b>your own code runs it</b>, the result is handed back, and
+    generation resumes. Press Step to advance the loop and watch the thread grow.
+  </p>
+
+  <div class="dg-stage">
+    <div class="tc-loop" aria-hidden="true">
+      <div class="tc-actor" id="tc-model">
+        <div class="a-title">Model</div>
+        <div class="a-sub">plans, never acts</div>
+      </div>
+      <div class="tc-arrows">
+        <div class="tc-arrow to-r" id="tc-arrow-call">
+          <span>tool call</span><span class="ln"></span>
+        </div>
+        <div class="tc-arrow to-l" id="tc-arrow-result">
+          <span class="ln"></span><span>result</span>
+        </div>
+      </div>
+      <div class="tc-actor" id="tc-code">
+        <div class="a-title">Your code</div>
+        <div class="a-sub">runs the tools</div>
+      </div>
+    </div>
+
+    <div style="height:12px"></div>
+    <p class="tc-cap" id="tc-cap" aria-live="polite"></p>
+
+    <div class="tc-thread" id="tc-thread"></div>
+  </div>
+
+  <div class="tc-bottom">
+    <div class="dg-controls">
+      <button class="dg-btn is-primary" id="tc-step" type="button" aria-label="Advance the tool-calling loop one step">Step &rarr;</button>
+      <button class="dg-btn" id="tc-reset" type="button" aria-label="Reset the loop to the start">Reset</button>
+    </div>
+    <span class="tc-prog" id="tc-prog" aria-live="polite">Step 1 of 4</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var reduce = false;
+  try {
+    reduce = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {}
+
+  // Each entry = one message appended to the thread + which actor/arrow lights up.
+  var STEPS = [
+    {
+      cls: 'r-user', dot: 'var(--muted)', role: 'User → model',
+      body: '"What is Jane Doe’s current account balance?"',
+      mnote: 'Sent together with the list of tools the model is allowed to use.',
+      actor: 'none', arrow: 'none',
+      cap: 'The request goes in alongside the available tools. The model now decides what to do.'
+    },
+    {
+      cls: 'r-call', dot: 'var(--accent)', role: 'Model proposes a tool call',
+      json: '{\n  "tool": "get_balance",\n  "args": { "customer": "Jane Doe" }\n}',
+      mnote: '<b>The model does not run this.</b> It only emits a structured request.',
+      actor: 'model', arrow: 'call',
+      cap: 'The model decides a tool is needed and emits a JSON call. Nothing has actually run yet.'
+    },
+    {
+      cls: 'r-result', dot: 'var(--gold)', role: 'Your code runs it → result',
+      json: '{ "balance": 4820.50, "currency": "USD" }',
+      mnote: 'Your runtime executed get_balance and handed the result back to the model.',
+      actor: 'code', arrow: 'result',
+      cap: 'Your own code (not the model) executes the function and returns the result.'
+    },
+    {
+      cls: 'r-final', dot: 'var(--accent2)', role: 'Model resumes → final answer',
+      body: '"Jane Doe’s balance is $4,820.50 (USD)."',
+      mnote: 'Generation resumes, now grounded in real, live data.',
+      actor: 'model', arrow: 'none',
+      cap: 'With the result in hand the model writes its final answer. Loop complete.'
+    }
+  ];
+
+  var thread = root.querySelector('#tc-thread');
+  var capEl = root.querySelector('#tc-cap');
+  var progEl = root.querySelector('#tc-prog');
+  var stepBtn = root.querySelector('#tc-step');
+  var resetBtn = root.querySelector('#tc-reset');
+  var modelEl = root.querySelector('#tc-model');
+  var codeEl = root.querySelector('#tc-code');
+  var arrowCall = root.querySelector('#tc-arrow-call');
+  var arrowResult = root.querySelector('#tc-arrow-result');
+
+  var shown = 0; // how many steps are revealed
+
+  function buildMsg(s) {
+    var m = document.createElement('div');
+    m.className = 'tc-msg anim ' + s.cls;
+    var inner = '<p class="role"><span class="dot" style="background:' + s.dot +
+      '"></span>' + s.role + '</p>';
+    if (s.body) inner += '<div class="body">' + s.body + '</div>';
+    if (s.json) inner += '<pre class="json">' + s.json + '</pre>';
+    if (s.mnote) inner += '<p class="mnote">' + s.mnote + '</p>';
+    m.innerHTML = inner;
+    return m;
+  }
+
+  function lightActors(s) {
+    modelEl.classList.toggle('is-on', s.actor === 'model');
+    codeEl.classList.toggle('is-on', s.actor === 'code');
+    arrowCall.classList.toggle('is-on', s.arrow === 'call');
+    arrowResult.classList.toggle('is-on', s.arrow === 'result');
+  }
+
+  function reveal(n) {
+    var s = STEPS[n];
+    var m = buildMsg(s);
+    thread.appendChild(m);
+    if (reduce) {
+      m.classList.add('is-in');
+    } else {
+      requestAnimationFrame(function () { m.classList.add('is-in'); });
+    }
+    capEl.innerHTML = s.cap;
+    lightActors(s);
+    progEl.textContent = 'Step ' + (n + 1) + ' of ' + STEPS.length;
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  function syncStepBtn() {
+    if (shown >= STEPS.length) {
+      stepBtn.innerHTML = 'Done';
+      stepBtn.disabled = true;
+      stepBtn.classList.remove('is-primary');
+    } else {
+      stepBtn.innerHTML = 'Step &rarr;';
+      stepBtn.disabled = false;
+      stepBtn.classList.add('is-primary');
+    }
+  }
+
+  function step() {
+    if (shown >= STEPS.length) return;
+    reveal(shown);
+    shown += 1;
+    syncStepBtn();
+  }
+
+  function resetAll() {
+    thread.innerHTML = '';
+    shown = 0;
+    modelEl.classList.remove('is-on');
+    codeEl.classList.remove('is-on');
+    arrowCall.classList.remove('is-on');
+    arrowResult.classList.remove('is-on');
+    step(); // show the first (user) message immediately
+  }
+
+  stepBtn.addEventListener('click', step);
+  resetBtn.addEventListener('click', resetAll);
+
+  resetAll();
+})();
+</script>
+</body>
+</html>

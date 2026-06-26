@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="reasoning">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reasoning and test-time compute</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* reasoning-only styles */
+  #r-q {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 12px 15px;
+    margin-bottom: 14px;
+  }
+  #r-q .r-q-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent2);
+  }
+  #r-q .r-q-text {
+    margin: 4px 0 0;
+    font-size: 14.5px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+
+  /* the worked reasoning trace */
+  #r-trace {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-height: 46px;
+    margin-bottom: 12px;
+  }
+  .r-step {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 7px 11px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-sm);
+  }
+  .r-step .r-step-n {
+    flex: 0 0 auto;
+    width: 19px;
+    height: 19px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 19px;
+    text-align: center;
+    align-self: center;
+  }
+  .r-step .r-step-lab {
+    flex: 1 1 auto;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .r-step .r-step-calc {
+    flex: 0 0 auto;
+    font-family: var(--dg-mono);
+    font-size: 12.5px;
+    color: var(--accent2);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .r-step.is-fresh {
+    animation: r-rise 0.4s cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+  }
+  @keyframes r-rise {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: none; }
+  }
+  .r-hidden {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 12px;
+    border: 1px dashed var(--line);
+    border-radius: var(--dg-r-sm);
+    color: var(--muted);
+    font-size: 12.5px;
+    font-style: italic;
+  }
+  /* the extra-compute annotation chip (self-consistency / tool check) */
+  .r-extra {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--dg-r-sm);
+    font-size: 12.5px;
+    font-weight: 550;
+    background: #fff;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+  }
+  .r-extra .r-extra-dot {
+    flex: 0 0 auto;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gold);
+  }
+
+  /* the answer line */
+  #r-answer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 12px;
+    padding: 11px 14px;
+    border-radius: var(--dg-r-md);
+    border: 1px solid var(--line);
+    background: var(--panel);
+    margin-bottom: 16px;
+  }
+  #r-answer .r-a-lab { font-size: 12.5px; color: var(--muted); }
+  #r-answer .r-a-val {
+    font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+  }
+  #r-answer .r-a-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; padding: 2px 9px; border-radius: 999px;
+  }
+  #r-answer .r-a-why {
+    flex: 1 1 100%; font-size: 12px; color: var(--muted); line-height: 1.45;
+  }
+  #r-answer.is-right { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  #r-answer.is-right .r-a-val { color: var(--accent2); }
+  #r-answer.is-right .r-a-tag { background: var(--accent); color: #fff; }
+  #r-answer.is-wrong { border-color: var(--gap); box-shadow: 0 0 0 1px var(--gap); }
+  #r-answer.is-wrong .r-a-val { color: var(--gap); }
+  #r-answer.is-wrong .r-a-tag { background: var(--gap); color: #fff; }
+
+  /* the three meters reuse the shared bar system; tune the gap color */
+  #r-meters { display: flex; flex-direction: column; gap: 2px; }
+  #r-meters .dg-bar.is-gap { background: var(--gap); }
+
+  /* controls */
+  #r-mode {
+    font-size: 12.5px; color: var(--muted); margin: 0 0 2px;
+  }
+  #r-mode b { color: var(--accent2); font-weight: 700; }
+  #r-note {
+    border-top: 1px solid var(--line); padding-top: 12px; margin-top: 2px;
+  }
+
+  @media (max-width: 480px) {
+    .r-step { flex-wrap: wrap; }
+    .r-step .r-step-calc { flex-basis: 100%; padding-left: 29px; }
+    #r-q .r-q-text { font-size: 13.5px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .r-step.is-fresh { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Reasoning &amp; test-time compute</p>
+    <h1 class="dg-title">Think before you answer</h1>
+  </div>
+  <p class="dg-caption">
+    Same hard question, more thinking. Toggle the reasoning on, or drag the
+    test-time-compute dial: more steps cost more tokens and time and push
+    accuracy up, with diminishing returns. <b>More steps never guarantee a
+    right answer.</b>
+  </p>
+
+  <div class="dg-stage">
+    <div id="r-q">
+      <span class="r-q-tag">Hard question</span>
+      <p class="r-q-text">A $40 shirt is 25% off, then a $5 coupon, then 8% sales tax. What is the final price?</p>
+    </div>
+
+    <div id="r-trace" aria-live="polite"></div>
+
+    <div id="r-answer" aria-live="polite"></div>
+
+    <div id="r-meters">
+      <div class="dg-bar-row">
+        <span class="dg-bar-label">Accuracy</span>
+        <div class="dg-track"><div class="dg-bar is-top" id="r-bar-acc"></div></div>
+        <span class="dg-bar-val" id="r-val-acc">0%</span>
+      </div>
+      <div class="dg-bar-row">
+        <span class="dg-bar-label">Cost</span>
+        <div class="dg-track"><div class="dg-bar is-gold" id="r-bar-cost"></div></div>
+        <span class="dg-bar-val" id="r-val-cost">1x</span>
+      </div>
+      <div class="dg-bar-row">
+        <span class="dg-bar-label">Latency</span>
+        <div class="dg-track"><div class="dg-bar" id="r-bar-lat"></div></div>
+        <span class="dg-bar-val" id="r-val-lat">fast</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dg-controls">
+    <button class="dg-btn" id="r-toggle" type="button" aria-pressed="false"
+      aria-label="Show or hide the model's reasoning">Show reasoning</button>
+    <div class="dg-slider-wrap">
+      <div class="dg-slider-lab">
+        <span>Test-time compute</span><b id="r-slider-val">0</b>
+      </div>
+      <input class="dg-slider" id="r-slider" type="range" min="0" max="4" step="1" value="0"
+        aria-label="Test-time compute: how much the model thinks before answering" />
+      <p id="r-mode">Mode: <b id="r-mode-name">Direct</b> &middot; <span id="r-mode-sub">answer immediately</span></p>
+    </div>
+  </div>
+
+  <p class="dg-label" id="r-note"></p>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch is-line" style="background:var(--accent2)"></i> accuracy</span>
+    <span><i class="dg-swatch is-line" style="background:var(--gold)"></i> cost (tokens)</span>
+    <span><i class="dg-swatch is-line" style="background:var(--accent)"></i> latency</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var reduce = false;
+  try {
+    reduce = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {}
+
+  function bump() { if (window.reportDiagramHeight) window.reportDiagramHeight(); }
+
+  // The single worked problem, broken into ordered steps.
+  var STEPS = [
+    { label: 'Take 25% off', calc: '40 × 0.75 = 30' },
+    { label: 'Apply the $5 coupon', calc: '30 − 5 = 25' },
+    { label: 'Add 8% sales tax', calc: '25 × 1.08 = 27' },
+    { label: 'Final price', calc: '= $27' }
+  ];
+
+  // Five thinking budgets. acc is accuracy on problems like this one (a
+  // population stat); the worked answer flips from wrong to right at level 2.
+  var LEVELS = [
+    { name: 'Direct', sub: 'answer immediately', steps: 0,
+      answer: '$30', right: false, why: 'Blurts the after-discount price. One forward pass leaves no room to work.',
+      acc: 32, accTxt: '32%', cost: 5, costTxt: '1x', lat: 8, latTxt: 'instant', extra: null,
+      note: 'Direct answer: fast and cheap, but a single pass cannot work a multi-step problem out. Here it skips the coupon and the tax.' },
+    { name: 'Partial', sub: 'a couple of steps', steps: 2,
+      answer: '$25', right: false, why: 'Right method, stopped too early: it forgot the 8% tax.',
+      acc: 55, accTxt: '55%', cost: 14, costTxt: '3x', lat: 22, latTxt: 'quick', extra: null,
+      note: 'Some reasoning beats none, but stopping early still misses the last step. More steps are not the same as enough steps.' },
+    { name: 'Step by step', sub: 'full chain-of-thought', steps: 4,
+      answer: '$27', right: true, why: 'All four steps worked through in order. Correct.',
+      acc: 80, accTxt: '80%', cost: 24, costTxt: '5x', lat: 42, latTxt: 'noticeable', extra: null,
+      note: 'Writing out every step lets the model break the problem apart and catch its own slips. That is what chain-of-thought buys.' },
+    { name: 'Many paths', sub: 'self-consistency', steps: 4,
+      answer: '$27', right: true, why: 'Solved 5 times independently; 4 of 5 runs agree on $27.',
+      acc: 91, accTxt: '91%', cost: 80, costTxt: '18x', lat: 74, latTxt: 'slow',
+      extra: 'Ran 5 times, took the majority: 4 of 5 agree on $27',
+      note: 'Self-consistency samples several independent attempts and keeps the most common answer. More reliable than one run, but you pay for every run.' },
+    { name: 'Tool-checked', sub: 'verification', steps: 4,
+      answer: '$27', right: true, why: 'A calculator confirms 25 × 1.08 = 27.00.',
+      acc: 97, accTxt: '97%', cost: 96, costTxt: '22x', lat: 92, latTxt: 'slowest',
+      extra: 'Checked with a calculator: 25 × 1.08 = 27.00, verified',
+      note: 'Verification grounds a step in something real instead of trusting text that sounds right. Even so accuracy plateaus: more thinking never guarantees a correct answer.' }
+  ];
+
+  var elTrace = root.querySelector('#r-trace');
+  var elAnswer = root.querySelector('#r-answer');
+  var barAcc = root.querySelector('#r-bar-acc');
+  var barCost = root.querySelector('#r-bar-cost');
+  var barLat = root.querySelector('#r-bar-lat');
+  var valAcc = root.querySelector('#r-val-acc');
+  var valCost = root.querySelector('#r-val-cost');
+  var valLat = root.querySelector('#r-val-lat');
+  var slider = root.querySelector('#r-slider');
+  var sliderVal = root.querySelector('#r-slider-val');
+  var toggle = root.querySelector('#r-toggle');
+  var modeName = root.querySelector('#r-mode-name');
+  var modeSub = root.querySelector('#r-mode-sub');
+  var note = root.querySelector('#r-note');
+
+  var cur = 0;
+  var prevSteps = 0;
+
+  function renderTrace(L, animateFrom) {
+    elTrace.innerHTML = '';
+    if (L.steps === 0) {
+      var hid = document.createElement('div');
+      hid.className = 'r-hidden';
+      hid.textContent = 'Reasoning hidden: the model answers in one shot.';
+      elTrace.appendChild(hid);
+      return;
+    }
+    for (var i = 0; i < L.steps; i++) {
+      var s = STEPS[i];
+      var row = document.createElement('div');
+      row.className = 'r-step';
+      if (!reduce && i >= animateFrom) {
+        row.className += ' is-fresh';
+        row.style.animationDelay = (0.06 * (i - animateFrom)) + 's';
+      }
+      row.innerHTML =
+        '<span class="r-step-n">' + (i + 1) + '</span>' +
+        '<span class="r-step-lab">' + s.label + '</span>' +
+        '<span class="r-step-calc">' + s.calc + '</span>';
+      elTrace.appendChild(row);
+    }
+    if (L.extra) {
+      var ex = document.createElement('div');
+      ex.className = 'r-extra';
+      if (!reduce) { ex.className += ' is-fresh'; ex.style.animationDelay = (0.06 * L.steps) + 's'; }
+      ex.innerHTML = '<span class="r-extra-dot"></span><span>' + L.extra + '</span>';
+      elTrace.appendChild(ex);
+    }
+  }
+
+  function renderAnswer(L) {
+    elAnswer.className = L.right ? 'is-right' : 'is-wrong';
+    elAnswer.innerHTML =
+      '<span class="r-a-lab">Model answers</span>' +
+      '<span class="r-a-val">' + L.answer + '</span>' +
+      '<span class="r-a-tag">' + (L.right ? 'correct' : 'wrong') + '</span>' +
+      '<span class="r-a-why">' + L.why + '</span>';
+  }
+
+  function setBar(bar, val, txt, isGap, valEl) {
+    bar.classList.toggle('is-gap', !!isGap);
+    bar.style.width = val + '%';
+    valEl.textContent = txt;
+  }
+
+  function show(i, fromUser) {
+    i = Math.max(0, Math.min(LEVELS.length - 1, i));
+    var L = LEVELS[i];
+    var animateFrom = (i > cur) ? prevSteps : L.steps; // only animate newly added steps
+    cur = i;
+
+    renderTrace(L, animateFrom);
+    renderAnswer(L);
+
+    // accuracy bar turns red while the answer is still wrong
+    setBar(barAcc, L.acc, L.accTxt, !L.right, valAcc);
+    barAcc.classList.toggle('is-top', L.right);
+    setBar(barCost, L.cost, L.costTxt + ' tokens', false, valCost);
+    setBar(barLat, L.lat, L.latTxt, false, valLat);
+
+    slider.value = String(i);
+    sliderVal.textContent = String(i);
+    modeName.textContent = L.name;
+    modeSub.textContent = L.sub;
+    note.textContent = L.note;
+
+    var reasoningOn = i > 0;
+    toggle.setAttribute('aria-pressed', reasoningOn ? 'true' : 'false');
+    toggle.textContent = reasoningOn ? 'Hide reasoning' : 'Show reasoning';
+    toggle.classList.toggle('is-active', reasoningOn);
+
+    prevSteps = L.steps;
+    bump();
+  }
+
+  slider.addEventListener('input', function () {
+    show(parseInt(slider.value, 10), true);
+  });
+  toggle.addEventListener('click', function () {
+    // jump between Direct (0) and full Step-by-step (2)
+    show(cur > 0 ? 0 : 2, true);
+  });
+
+  show(0, false);
+})();
+</script>
+</body>
+</html>

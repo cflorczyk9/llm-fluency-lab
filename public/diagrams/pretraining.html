@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="pretraining">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How a neural network learns</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* pretraining-only (backprop) styles, scoped to #sec-backprop.
+     Ported from the visual guide; outer card chrome dropped so the diagram
+     sits transparently inside the app panel. */
+  #sec-backprop {
+    width:100%; max-width:640px; margin:0 auto; color:var(--ink);
+  }
+  #sec-backprop * { box-sizing:border-box; }
+  #sec-backprop .bp-note { color:var(--muted); font-size:12px; line-height:1.45; margin:0 0 12px; max-width:660px; font-style:italic; }
+
+  #sec-backprop .bp-stage {
+    position:relative; background:var(--panel2); border:1px solid var(--line);
+    border-radius:14px; overflow:hidden;
+  }
+  #sec-backprop svg { display:block; width:100%; height:auto; }
+
+  /* phase label that floats over the stage */
+  #sec-backprop .bp-phase {
+    position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    font-size:13px; font-weight:600; letter-spacing:0.3px; padding:6px 14px;
+    border-radius:999px; background:var(--panel); border:1px solid var(--line);
+    color:var(--muted); transition:color .25s ease, border-color .25s ease, background .25s ease;
+    white-space:nowrap; pointer-events:none; box-shadow:0 2px 8px rgba(28,29,31,0.06);
+  }
+  #sec-backprop .bp-phase.is-fwd { color:var(--accent2); border-color:var(--accent); }
+  #sec-backprop .bp-phase.is-bwd { color:var(--gap); border-color:var(--gap); }
+  #sec-backprop .bp-phase.is-done { color:var(--accent2); border-color:var(--accent2); }
+
+  /* column captions under the net */
+  #sec-backprop .bp-cols {
+    display:flex; justify-content:space-between; padding:0 6px; margin-top:6px;
+    color:var(--muted); font-size:12px; letter-spacing:0.3px; font-weight:600;
+  }
+  #sec-backprop .bp-dirs {
+    display:flex; justify-content:space-between; padding:0 6px; margin-top:8px;
+  }
+  #sec-backprop .bp-dir { font-size:12px; font-weight:600; letter-spacing:0.2px; }
+  #sec-backprop .bp-dir-fwd { color:var(--accent2); }
+  #sec-backprop .bp-dir-bwd { color:var(--gap); }
+
+  /* controls */
+  #sec-backprop .bp-controls {
+    display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:18px;
+  }
+  #sec-backprop button {
+    font:inherit; font-size:14px; font-weight:600; color:var(--ink);
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:10px 18px; cursor:pointer; transition:border-color .2s ease, background .2s ease, transform .08s ease;
+  }
+  #sec-backprop button:hover { border-color:var(--accent); }
+  #sec-backprop button:active { transform:translateY(1px); }
+  #sec-backprop button:disabled { opacity:0.45; cursor:default; border-color:var(--line); }
+  #sec-backprop button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  #sec-backprop button.bp-run { background:var(--accent); color:#ffffff; border-color:var(--accent); }
+  #sec-backprop button.bp-run:hover { background:var(--accent2); border-color:var(--accent2); }
+  #sec-backprop button.bp-train.is-on { background:var(--gap); color:#ffffff; border-color:var(--gap); }
+  #sec-backprop button.bp-train.is-on:hover { background:var(--gap); border-color:var(--gap); }
+
+  /* readouts */
+  #sec-backprop .bp-readouts { display:flex; gap:16px; margin-left:auto; align-items:center; flex-wrap:wrap; }
+  #sec-backprop .bp-stat {
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:8px 14px; min-width:92px; text-align:center;
+  }
+  #sec-backprop .bp-stat .lab { display:block; color:var(--muted); font-size:11px; letter-spacing:0.4px; text-transform:uppercase; }
+  #sec-backprop .bp-stat .val { display:block; font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px; }
+  #sec-backprop .bp-stat .val.err { color:var(--gap); }
+  #sec-backprop .bp-stat .val.step { color:var(--accent); }
+
+  /* error chart */
+  #sec-backprop .bp-chart-wrap { margin-top:16px; }
+  #sec-backprop .bp-chart-cap {
+    display:flex; justify-content:space-between; align-items:baseline;
+    color:var(--muted); font-size:12px; letter-spacing:0.3px; margin-bottom:6px;
+  }
+  #sec-backprop .bp-chart {
+    background:var(--panel2); border:1px solid var(--line); border-radius:12px;
+    height:96px; width:100%;
+  }
+
+  /* legend */
+  #sec-backprop .bp-legend {
+    display:flex; flex-wrap:wrap; gap:18px; margin-top:16px; padding-top:14px;
+    border-top:1px solid var(--line); color:var(--muted); font-size:12.5px;
+  }
+  #sec-backprop .bp-legend span { display:inline-flex; align-items:center; gap:7px; }
+  #sec-backprop .bp-swatch { width:22px; height:4px; border-radius:3px; display:inline-block; }
+  #sec-backprop .bp-dot { width:11px; height:11px; border-radius:50%; display:inline-block; }
+
+  @media (max-width:560px) {
+    #sec-backprop .bp-readouts { margin-left:0; width:100%; }
+    #sec-backprop .bp-stat { flex:1; min-width:0; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Pretraining and scaling</p>
+    <h1 class="dg-title">How a neural network learns</h1>
+  </div>
+  <p class="dg-caption">
+    A guess flows <b>forward</b> (left to right), gets compared to the target to
+    measure the error, then that error travels <b>backward</b> and nudges every
+    connection to do a little better. Run a step, or hit Train and watch the
+    error shrink.
+  </p>
+
+  <section class="viz" id="sec-backprop">
+    <p class="bp-note">Illustrative animation: the activations and weight changes are simulated for intuition, not exact math. The directions and the shrinking error are faithful to how training works.</p>
+
+    <div class="bp-stage">
+      <div class="bp-phase" id="bp-phase">Ready</div>
+      <svg id="bp-svg" viewBox="0 0 860 420" preserveAspectRatio="xMidYMid meet" aria-label="Animated neural network diagram"></svg>
+    </div>
+    <div class="bp-cols">
+      <span>Inputs</span><span>Hidden</span><span>Hidden</span><span>Output vs target</span>
+    </div>
+    <div class="bp-dirs">
+      <span class="bp-dir bp-dir-fwd">Forward pass: guess flows this way &rarr;</span>
+      <span class="bp-dir bp-dir-bwd">&larr; Backward pass: error flows this way</span>
+    </div>
+
+    <div class="bp-controls">
+      <button class="bp-run" id="bp-step" aria-label="Run one training step">Run one step</button>
+      <button class="bp-train" id="bp-train" aria-label="Train continuously">Train</button>
+      <button id="bp-reset" aria-label="Reset the network">Reset</button>
+      <div class="bp-readouts">
+        <div class="bp-stat"><span class="lab">Step</span><span class="val step" id="bp-stepnum">0</span></div>
+        <div class="bp-stat"><span class="lab">Error</span><span class="val err" id="bp-errval">--</span></div>
+      </div>
+    </div>
+
+    <div class="bp-chart-wrap">
+      <div class="bp-chart-cap"><span>Error over time</span><span id="bp-chart-note">it should tick down as training runs</span></div>
+      <svg class="bp-chart" id="bp-chart" viewBox="0 0 860 96" preserveAspectRatio="none" aria-label="Error versus step chart"></svg>
+    </div>
+
+    <div class="bp-legend">
+      <span><i class="bp-swatch" style="background:var(--accent)"></i> Forward signal (the guess)</span>
+      <span><i class="bp-swatch" style="background:var(--gap)"></i> Error flowing backward</span>
+      <span><i class="bp-dot" style="background:var(--accent2)"></i> Active neuron</span>
+      <span><i class="bp-dot" style="background:var(--gold)"></i> Target</span>
+      <span>Edge thickness = weight strength (it changes as weights are nudged)</span>
+    </div>
+  </section>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function init() {
+    var root = document.getElementById('sec-backprop');
+    if (!root) return;
+
+    var SVGNS = 'http://www.w3.org/2000/svg';
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // palette pulled from CSS vars so the host controls color
+    var cs = getComputedStyle(root);
+    var C = {
+      bg: cs.getPropertyValue('--bg').trim() || '#f7f3ea',
+      panel: cs.getPropertyValue('--panel').trim() || '#ffffff',
+      panel2: cs.getPropertyValue('--panel2').trim() || '#efe9da',
+      accent: cs.getPropertyValue('--accent').trim() || '#2f8cff',
+      accent2: cs.getPropertyValue('--accent2').trim() || '#0b5394',
+      gap: cs.getPropertyValue('--gap').trim() || '#dc2626',
+      gold: cs.getPropertyValue('--gold').trim() || '#d97706',
+      line: cs.getPropertyValue('--line').trim() || '#e6dfce',
+      muted: cs.getPropertyValue('--muted').trim() || '#6b7280',
+      ink: cs.getPropertyValue('--ink').trim() || '#1c1d1f'
+    };
+    // node base fill on the light stage (resting, un-activated)
+    var NODE_BASE = C.panel;
+    // resting edge styling for the light stage (ink stroke reads on cream)
+    var EDGE_COLOR = C.ink;
+    var EDGE_OP = 0.32;
+
+    var svg = document.getElementById('bp-svg');
+    var phaseEl = document.getElementById('bp-phase');
+    var stepBtn = document.getElementById('bp-step');
+    var trainBtn = document.getElementById('bp-train');
+    var resetBtn = document.getElementById('bp-reset');
+    var stepNumEl = document.getElementById('bp-stepnum');
+    var errValEl = document.getElementById('bp-errval');
+    var chart = document.getElementById('bp-chart');
+
+    // ----- network geometry -----
+    var layerSizes = [3, 4, 4, 2];
+    var W = 860, H = 420;
+    var marginX = 90, marginY = 56;
+    var usableW = W - marginX * 2;
+    var nodeR = 17;
+
+    var layers = []; // layers[l] = array of {x,y,el,glow,act}
+    var edges = [];  // {l, i, j, x1,y1,x2,y2, w, baseW, el, x mid...}
+
+    function el(tag, attrs) {
+      var n = document.createElementNS(SVGNS, tag);
+      for (var k in attrs) n.setAttribute(k, attrs[k]);
+      return n;
+    }
+
+    function rand(a, b) { return a + Math.random() * (b - a); }
+
+    // build node positions
+    function buildPositions() {
+      layers = [];
+      for (var l = 0; l < layerSizes.length; l++) {
+        var n = layerSizes[l];
+        var x = marginX + (usableW * l) / (layerSizes.length - 1);
+        var arr = [];
+        var spacing = (H - marginY * 2) / Math.max(1, (n - 1));
+        var topY = (n === 1) ? H / 2 : marginY;
+        for (var i = 0; i < n; i++) {
+          var y = (n === 1) ? H / 2 : topY + spacing * i;
+          arr.push({ x: x, y: y });
+        }
+        layers.push(arr);
+      }
+    }
+
+    var gEdges, gNodes, gOverlay;
+
+    function drawStatic() {
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      edges = [];
+
+      gEdges = el('g', {});
+      gNodes = el('g', {});
+      gOverlay = el('g', {}); // pulses travel here, above edges
+      svg.appendChild(gEdges);
+      svg.appendChild(gOverlay);
+      svg.appendChild(gNodes);
+
+      // edges
+      for (var l = 0; l < layers.length - 1; l++) {
+        for (var i = 0; i < layers[l].length; i++) {
+          for (var j = 0; j < layers[l + 1].length; j++) {
+            var a = layers[l][i], b = layers[l + 1][j];
+            var w = rand(0.25, 1.0); // weight magnitude 0..1
+            var line = el('line', {
+              x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+              stroke: EDGE_COLOR, 'stroke-width': edgeWidth(w),
+              'stroke-linecap': 'round', opacity: EDGE_OP
+            });
+            gEdges.appendChild(line);
+            edges.push({
+              l: l, i: i, j: j, x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+              w: w, el: line
+            });
+          }
+        }
+      }
+
+      // nodes
+      for (var L = 0; L < layers.length; L++) {
+        for (var k = 0; k < layers[L].length; k++) {
+          var node = layers[L][k];
+          var glow = el('circle', {
+            cx: node.x, cy: node.y, r: nodeR + 7,
+            fill: 'none', stroke: C.accent, 'stroke-width': 2.5, opacity: 0
+          });
+          var circ = el('circle', {
+            cx: node.x, cy: node.y, r: nodeR,
+            fill: NODE_BASE, stroke: C.ink, 'stroke-width': 1.8, 'stroke-opacity': 0.5
+          });
+          gNodes.appendChild(glow);
+          gNodes.appendChild(circ);
+          node.el = circ;
+          node.glow = glow;
+          node.act = 0;
+        }
+      }
+
+      // target marker on output layer (gold ring on top output node)
+      var outLayer = layers[layers.length - 1];
+      if (outLayer.length) {
+        var t = outLayer[0];
+        var tring = el('circle', {
+          cx: t.x + 0, cy: t.y, r: nodeR + 12,
+          fill: 'none', stroke: C.gold, 'stroke-width': 2,
+          'stroke-dasharray': '4 5', opacity: 0.85
+        });
+        gNodes.appendChild(tring);
+        var tlabel = el('text', {
+          x: t.x + 42, y: t.y + 4, fill: C.gold,
+          'font-size': 12, 'font-family': 'inherit', 'font-weight': 600
+        });
+        tlabel.textContent = 'target';
+        gNodes.appendChild(tlabel);
+      }
+    }
+
+    function edgeWidth(w) { return 1 + w * 4.0; }
+
+    // ----- animation engine -----
+    var rafId = null;
+    var animQueue = []; // list of active tweens
+    var loopRunning = false;
+    var stepCount = 0;
+    var error = 1.0;            // simulated error, starts high
+    var history = [];          // error history for chart
+    var phaseBusy = false;     // a forward+backward run in progress
+    // speed multiplier: single steps run slow + legible, continuous training is
+    // brisker so the "error shrinks over time" takeaway lands quickly.
+    var speed = 1;
+    function spd(ms) { return ms * speed; }
+
+    function now() { return performance.now(); }
+
+    function addTween(tw) { animQueue.push(tw); ensureRaf(); }
+
+    function ensureRaf() {
+      if (rafId == null) rafId = requestAnimationFrame(frame);
+    }
+
+    function frame(t) {
+      rafId = null;
+      var alive = [];
+      for (var i = 0; i < animQueue.length; i++) {
+        var tw = animQueue[i];
+        if (tw.start == null) tw.start = t;
+        var p = (t - tw.start) / tw.dur;
+        if (p >= 1) { p = 1; }
+        var e = tw.ease ? tw.ease(p) : p;
+        tw.update(e, p);
+        if (p < 1) alive.push(tw);
+        else if (tw.done) tw.done();
+      }
+      animQueue = alive;
+      if (animQueue.length) rafId = requestAnimationFrame(frame);
+    }
+
+    function easeInOut(p) { return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; }
+    function easeOut(p) { return 1 - Math.pow(1 - p, 3); }
+
+    function setPhase(text, mode) {
+      phaseEl.textContent = text;
+      phaseEl.className = 'bp-phase' + (mode ? ' is-' + mode : '');
+    }
+
+    function delay(ms) {
+      return new Promise(function (res) {
+        if (reduceMotion) ms = 0;
+        setTimeout(res, spd(ms));
+      });
+    }
+
+    // move a glowing pulse dot along an edge
+    function pulseEdge(edge, color, dir, dur) {
+      return new Promise(function (resolve) {
+        var x1 = edge.x1, y1 = edge.y1, x2 = edge.x2, y2 = edge.y2;
+        if (dir < 0) { x1 = edge.x2; y1 = edge.y2; x2 = edge.x1; y2 = edge.y1; }
+        var dot = el('circle', { cx: x1, cy: y1, r: 4.5, fill: color, opacity: 0.95 });
+        gOverlay.appendChild(dot);
+        // light the wire under the pulse
+        var origStroke = edge.el.getAttribute('stroke');
+        var origOp = edge.el.getAttribute('opacity');
+        edge.el.setAttribute('stroke', color);
+        edge.el.setAttribute('opacity', 0.85);
+        if (reduceMotion) {
+          if (dot.parentNode) gOverlay.removeChild(dot);
+          setTimeout(function () {
+            edge.el.setAttribute('stroke', origStroke);
+            edge.el.setAttribute('opacity', origOp);
+            resolve();
+          }, 0);
+          return;
+        }
+        addTween({
+          start: null, dur: dur, ease: easeInOut,
+          update: function (e) {
+            dot.setAttribute('cx', x1 + (x2 - x1) * e);
+            dot.setAttribute('cy', y1 + (y2 - y1) * e);
+          },
+          done: function () {
+            if (dot.parentNode) gOverlay.removeChild(dot);
+            // fade the wire back
+            addTween({
+              start: null, dur: 260, ease: easeOut,
+              update: function (e) { edge.el.setAttribute('opacity', 0.85 - 0.30 * e); },
+              done: function () {
+                edge.el.setAttribute('stroke', origStroke);
+                edge.el.setAttribute('opacity', origOp);
+                resolve();
+              }
+            });
+          }
+        });
+      });
+    }
+
+    // light up a node by activation 0..1
+    function activateNode(node, level) {
+      return new Promise(function (resolve) {
+        node.act = level;
+        // light stage: blend the white node toward blue by activation
+        var target = 0.20 + level * 0.65;
+        var fillTo = mix(NODE_BASE, C.accent, target);
+        if (reduceMotion) {
+          node.el.setAttribute('fill', fillTo);
+          node.el.setAttribute('stroke', C.accent2);
+          node.el.setAttribute('stroke-opacity', 1);
+          node.glow.setAttribute('opacity', 0.0);
+          resolve(); return;
+        }
+        node.el.setAttribute('stroke', C.accent2);
+        node.el.setAttribute('stroke-opacity', 1);
+        addTween({
+          start: null, dur: spd(360), ease: easeOut,
+          update: function (e) {
+            node.el.setAttribute('fill', mix(NODE_BASE, C.accent, target * e));
+            // glow pulse: rise then fall
+            var g = Math.sin(e * Math.PI);
+            node.glow.setAttribute('opacity', 0.45 * g * level);
+            node.glow.setAttribute('r', nodeR + 7 + 5 * g);
+            node.glow.setAttribute('stroke', C.accent);
+          },
+          done: resolve
+        });
+      });
+    }
+
+    // backward glow on a node (error signal arriving) - pink ring
+    function backNode(node) {
+      return new Promise(function (resolve) {
+        if (reduceMotion) {
+          node.el.setAttribute('stroke', C.gap);
+          node.el.setAttribute('stroke-opacity', 1);
+          resolve(); return;
+        }
+        node.el.setAttribute('stroke', C.gap);
+        node.el.setAttribute('stroke-opacity', 1);
+        addTween({
+          start: null, dur: spd(320), ease: easeOut,
+          update: function (e) {
+            var g = Math.sin(e * Math.PI);
+            node.glow.setAttribute('opacity', 0.55 * g);
+            node.glow.setAttribute('r', nodeR + 7 + 6 * g);
+            node.glow.setAttribute('stroke', C.gap);
+          },
+          done: resolve
+        });
+      });
+    }
+
+    // visibly nudge a weight during the backward pass: thickness changes a touch.
+    // The direction per weight is simulated (intuition, not exact gradient math),
+    // so we color the change with the single backward/error color rather than
+    // implying a meaningful per-weight sign.
+    function nudgeWeight(edge) {
+      var sign = Math.random() < 0.5 ? -1 : 1;     // simulated nudge direction
+      var mag = rand(0.04, 0.14);                   // small step
+      var fromW = edge.w;
+      var toW = Math.max(0.12, Math.min(1.0, edge.w + sign * mag));
+      edge.w = toW;
+      return new Promise(function (resolve) {
+        if (reduceMotion) {
+          edge.el.setAttribute('stroke-width', edgeWidth(toW));
+          edge.el.setAttribute('stroke', EDGE_COLOR);
+          edge.el.setAttribute('opacity', EDGE_OP);
+          resolve(); return;
+        }
+        addTween({
+          start: null, dur: spd(420), ease: easeInOut,
+          update: function (e) {
+            edge.el.setAttribute('stroke-width', edgeWidth(fromW + (toW - fromW) * e));
+            edge.el.setAttribute('stroke', C.gap);
+            var g = Math.sin(e * Math.PI);
+            edge.el.setAttribute('opacity', 0.45 + 0.45 * g);
+          },
+          done: function () {
+            edge.el.setAttribute('stroke', EDGE_COLOR);
+            edge.el.setAttribute('opacity', EDGE_OP);
+            resolve();
+          }
+        });
+      });
+    }
+
+    function resetNodeStyles() {
+      for (var L = 0; L < layers.length; L++) {
+        for (var k = 0; k < layers[L].length; k++) {
+          var node = layers[L][k];
+          node.el.setAttribute('fill', NODE_BASE);
+          node.el.setAttribute('stroke', C.ink);
+          node.el.setAttribute('stroke-opacity', 0.5);
+          node.glow.setAttribute('opacity', 0);
+          node.glow.setAttribute('r', nodeR + 7);
+        }
+      }
+    }
+
+    // ----- forward pass -----
+    async function forwardPass() {
+      setPhase('Forward pass: the network makes a guess', 'fwd');
+      resetNodeStyles();
+      // input layer lights immediately
+      var inputs = layers[0].map(function () { return rand(0.4, 1.0); });
+      var pf = [];
+      for (var i = 0; i < layers[0].length; i++) pf.push(activateNode(layers[0][i], inputs[i]));
+      await Promise.all(pf);
+      await delay(120);
+
+      // propagate layer by layer
+      for (var l = 0; l < layers.length - 1; l++) {
+        // pulse all edges from layer l to l+1
+        var edgePromises = [];
+        for (var e = 0; e < edges.length; e++) {
+          if (edges[e].l === l) {
+            edgePromises.push(pulseEdge(edges[e], C.accent, 1, spd(540)));
+          }
+        }
+        await Promise.all(edgePromises);
+        // light next layer
+        var act = [];
+        for (var j = 0; j < layers[l + 1].length; j++) {
+          act.push(activateNode(layers[l + 1][j], rand(0.35, 1.0)));
+        }
+        await Promise.all(act);
+        await delay(90);
+      }
+    }
+
+    // flash the error gap between output[0] and the gold target ring
+    async function showError() {
+      var out = layers[layers.length - 1][0];
+      setPhase('Off by this much: that gap is the error', 'bwd');
+      // pulse the target ring + output node together
+      if (!reduceMotion) {
+        await new Promise(function (resolve) {
+          addTween({
+            start: null, dur: spd(700), ease: easeInOut,
+            update: function (e) {
+              var g = Math.sin(e * Math.PI * 2);
+              out.glow.setAttribute('stroke', C.gold);
+              out.glow.setAttribute('opacity', 0.6 * Math.abs(g));
+              out.glow.setAttribute('r', nodeR + 9 + 4 * g);
+            },
+            done: resolve
+          });
+        });
+      } else {
+        await delay(0);
+      }
+    }
+
+    // ----- backward pass -----
+    async function backwardPass() {
+      setPhase('Backward pass: the error flows back and fixes the weights', 'bwd');
+      // start from output layer going left
+      for (var l = layers.length - 2; l >= 0; l--) {
+        // mark the right-side nodes as receiving error
+        var bn = [];
+        for (var j = 0; j < layers[l + 1].length; j++) bn.push(backNode(layers[l + 1][j]));
+        await Promise.all(bn);
+
+        // pulse error backward along every edge of this layer, then nudge it
+        var promises = [];
+        for (var e = 0; e < edges.length; e++) {
+          if (edges[e].l === l) {
+            promises.push(pulseEdge(edges[e], C.gap, -1, spd(520)));
+          }
+        }
+        await Promise.all(promises);
+
+        // now visibly nudge each weight in this layer
+        var nudges = [];
+        for (var e2 = 0; e2 < edges.length; e2++) {
+          if (edges[e2].l === l) nudges.push(nudgeWeight(edges[e2]));
+        }
+        await Promise.all(nudges);
+        await delay(70);
+      }
+      // left layer flash
+      var bn0 = [];
+      for (var k = 0; k < layers[0].length; k++) bn0.push(backNode(layers[0][k]));
+      await Promise.all(bn0);
+    }
+
+    // ----- one full training step -----
+    async function oneStep() {
+      if (phaseBusy) return;
+      phaseBusy = true;
+      stepBtn.disabled = true;
+      // brisker when training continuously, slow + legible for a single step
+      speed = loopRunning ? 0.5 : 1;
+
+      await forwardPass();
+      await delay(reduceMotion ? 0 : 200);
+      await showError();
+      await delay(reduceMotion ? 0 : 200);
+      await backwardPass();
+
+      // error decreases each step (simulated, asymptotic toward a small floor).
+      // Strictly non-increasing so the chart never shows a false uptick.
+      stepCount += 1;
+      var floor = 0.03;
+      var next = floor + (error - floor) * (0.80 + Math.random() * 0.07);
+      if (next > error) next = error; // never rise
+      if (next < floor) next = floor;
+      error = next;
+      history.push(error);
+      if (history.length > 120) history.shift();
+      updateReadouts();
+      drawChart();
+
+      if (loopRunning) {
+        setPhase('Training: error shrinking', 'fwd');
+      } else {
+        setPhase('Step complete: error is a little smaller', 'done');
+      }
+
+      phaseBusy = false;
+      stepBtn.disabled = false;
+    }
+
+    function updateReadouts() {
+      stepNumEl.textContent = String(stepCount);
+      errValEl.textContent = error.toFixed(3);
+    }
+
+    // ----- error chart -----
+    function drawChart() {
+      while (chart.firstChild) chart.removeChild(chart.firstChild);
+      var cw = 860, ch = 96, pad = 8;
+      // baseline (zero-error reference)
+      var base = el('line', { x1: pad, y1: ch - pad, x2: cw - pad, y2: ch - pad, stroke: C.ink, 'stroke-opacity': 0.25, 'stroke-width': 1 });
+      chart.appendChild(base);
+      // y-axis hints
+      var hi = el('text', { x: pad + 2, y: pad + 9, fill: C.muted, 'font-size': 9, 'font-family': 'inherit' });
+      hi.textContent = 'high error';
+      chart.appendChild(hi);
+      var lo = el('text', { x: pad + 2, y: ch - pad - 4, fill: C.muted, 'font-size': 9, 'font-family': 'inherit' });
+      lo.textContent = 'low error';
+      chart.appendChild(lo);
+      if (history.length < 1) return;
+
+      var maxE = 1.0;
+      var n = history.length;
+      var pts = [];
+      for (var i = 0; i < n; i++) {
+        var x = pad + ((cw - pad * 2) * (n === 1 ? 0 : i / (n - 1)));
+        var y = pad + (ch - pad * 2) * (1 - Math.min(1, history[i] / maxE));
+        pts.push([x, y]);
+      }
+      // area fill
+      var dArea = 'M ' + pts[0][0] + ' ' + (ch - pad);
+      for (var p = 0; p < pts.length; p++) dArea += ' L ' + pts[p][0] + ' ' + pts[p][1];
+      dArea += ' L ' + pts[pts.length - 1][0] + ' ' + (ch - pad) + ' Z';
+      var area = el('path', { d: dArea, fill: C.gap, opacity: 0.12 });
+      chart.appendChild(area);
+      // line
+      var dLine = 'M ' + pts[0][0] + ' ' + pts[0][1];
+      for (var q = 1; q < pts.length; q++) dLine += ' L ' + pts[q][0] + ' ' + pts[q][1];
+      var line = el('path', { d: dLine, fill: 'none', stroke: C.gap, 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' });
+      chart.appendChild(line);
+      // last point marker
+      var last = pts[pts.length - 1];
+      chart.appendChild(el('circle', { cx: last[0], cy: last[1], r: 3.5, fill: C.gap }));
+    }
+
+    // ----- training loop -----
+    function trainTick() {
+      if (!loopRunning) return;
+      if (phaseBusy) { setTimeout(trainTick, 60); return; }
+      oneStep().then(function () {
+        if (loopRunning) setTimeout(trainTick, reduceMotion ? 250 : 220);
+      });
+    }
+
+    // ----- color mix helper -----
+    function hexToRgb(h) {
+      h = h.replace('#', '');
+      if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    }
+    function mix(a, b, t) {
+      t = Math.max(0, Math.min(1, t));
+      var ca = hexToRgb(a), cb = hexToRgb(b);
+      var r = Math.round(ca[0] + (cb[0] - ca[0]) * t);
+      var g = Math.round(ca[1] + (cb[1] - ca[1]) * t);
+      var bl = Math.round(ca[2] + (cb[2] - ca[2]) * t);
+      return 'rgb(' + r + ',' + g + ',' + bl + ')';
+    }
+
+    // ----- controls -----
+    stepBtn.addEventListener('click', function () {
+      if (loopRunning) return;
+      oneStep();
+    });
+
+    trainBtn.addEventListener('click', function () {
+      loopRunning = !loopRunning;
+      if (loopRunning) {
+        trainBtn.textContent = 'Stop';
+        trainBtn.classList.add('is-on');
+        stepBtn.disabled = true;
+        trainTick();
+      } else {
+        trainBtn.textContent = 'Train';
+        trainBtn.classList.remove('is-on');
+        stepBtn.disabled = false;
+        setPhase('Paused', null);
+      }
+    });
+
+    resetBtn.addEventListener('click', function () {
+      loopRunning = false;
+      trainBtn.textContent = 'Train';
+      trainBtn.classList.remove('is-on');
+      stepBtn.disabled = false;
+      // cancel tweens
+      if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+      animQueue = [];
+      phaseBusy = false;
+      stepCount = 0;
+      error = 1.0;
+      history = [];
+      buildPositions();
+      drawStatic();
+      resetNodeStyles();
+      updateReadouts();
+      errValEl.textContent = '--';
+      drawChart();
+      setPhase('Ready', null);
+    });
+
+    // clean teardown if the host removes the section
+    function teardown() {
+      loopRunning = false;
+      if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+      animQueue = [];
+    }
+    if (window.MutationObserver) {
+      var mo = new MutationObserver(function () {
+        if (!document.body.contains(root)) { teardown(); mo.disconnect(); }
+      });
+      if (root.parentNode) mo.observe(root.parentNode, { childList: true });
+    }
+    window.addEventListener('pagehide', teardown);
+
+    // ----- init -----
+    buildPositions();
+    drawStatic();
+    updateReadouts();
+    errValEl.textContent = '--';
+    drawChart();
+
+    // size the embedding iframe to the rendered diagram
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

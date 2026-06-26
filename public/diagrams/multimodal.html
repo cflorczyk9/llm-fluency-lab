@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="multimodal">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>One stream of tokens: words, tiles, and sound</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* multimodal-only styles */
+  #mm-count {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  #mm-count b { color: var(--accent2); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .mm-media {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .mm-col-img { flex: 1 1 300px; min-width: 0; }
+  .mm-col-aud { flex: 1 1 190px; min-width: 0; }
+  .mm-medialab {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+
+  /* the "image": a receipt screenshot, sliced by a patch grid */
+  .mm-img {
+    position: relative;
+    height: 142px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    overflow: hidden;
+  }
+  .mm-rbar { position: absolute; border-radius: 2px; background: color-mix(in srgb, var(--muted) 42%, transparent); }
+  .mm-rbar.dark { background: color-mix(in srgb, var(--ink) 60%, transparent); }
+  .mm-rdiv { position: absolute; left: 7%; right: 7%; height: 1px; background: var(--line); }
+  .mm-rtotal {
+    position: absolute;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold);
+    font-family: var(--dg-mono);
+  }
+  .mm-grid {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    z-index: 2;
+  }
+  .mm-patch {
+    border: 0.5px solid color-mix(in srgb, var(--accent) 50%, transparent);
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    transition: background 0.12s ease, box-shadow 0.12s ease;
+  }
+  .mm-patch:hover,
+  .mm-patch.is-hot {
+    background: color-mix(in srgb, var(--gold) 30%, transparent);
+    box-shadow: inset 0 0 0 1.5px var(--gold);
+  }
+  .mm-patch:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
+
+  /* the "audio": a voice clip, sliced into frame tokens */
+  .mm-aud {
+    position: relative;
+    height: 142px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    overflow: hidden;
+  }
+  .mm-wave {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 12px 10px;
+  }
+  .mm-mid { position: absolute; left: 8px; right: 8px; top: 50%; height: 1px; background: var(--line); }
+  .mm-frame {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+    transition: background 0.12s ease;
+  }
+  .mm-frame .bar {
+    width: 60%;
+    min-width: 3px;
+    border-radius: 3px;
+    background: var(--accent2);
+    opacity: 0.5;
+    transition: opacity 0.12s ease, background 0.12s ease;
+  }
+  .mm-frame:hover .bar,
+  .mm-frame.is-hot .bar { opacity: 1; background: var(--gold); }
+  .mm-frame.is-hot { background: color-mix(in srgb, var(--gold) 12%, transparent); }
+  .mm-frame:focus-visible { outline: 2px solid var(--accent2); outline-offset: -2px; }
+
+  /* the shared token stream */
+  .mm-streamlab {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 7px;
+  }
+  .mm-stream {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+  }
+  .mm-sep { width: 1px; align-self: stretch; background: var(--line); margin: 1px 4px; }
+  .mm-word {
+    font-size: 12.5px;
+    font-weight: 550;
+    padding: 5px 9px;
+    border-radius: 7px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .mm-tok {
+    width: 23px;
+    height: 23px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--dg-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+  .mm-tok-img { border-color: var(--accent); color: var(--accent2); background: color-mix(in srgb, var(--accent) 9%, var(--panel)); }
+  .mm-tok-aud { border-color: var(--accent2); color: var(--accent2); background: color-mix(in srgb, var(--accent2) 9%, var(--panel)); }
+  .mm-tok.is-hot { background: var(--gold); border-color: var(--gold); color: #fff; }
+
+  #mm-read {
+    margin: 12px 0 0;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--muted);
+    min-height: 18px;
+  }
+  #mm-read b { color: var(--ink); font-weight: 600; }
+
+  #mm-note {
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 11px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+  #mm-note b { color: var(--accent2); font-weight: 650; }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Multimodal Models</p>
+    <h1 class="dg-title">One stream of tokens: words, tiles, and sound</h1>
+  </div>
+  <p class="dg-caption">
+    A picture is cut into square <b>patches</b> and a sound into <b>time frames</b>. Each becomes a token
+    and lines up right next to the words, so the model reads text, image, and audio as one stream.
+    Hover a tile or a wave slice to find its token.
+  </p>
+
+  <div class="dg-controls">
+    <div class="dg-slider-wrap" style="max-width:300px;flex:1 1 240px">
+      <div class="dg-slider-lab"><span>Resolution / detail</span><b id="mm-lvl">Medium</b></div>
+      <input class="dg-slider" id="mm-res" type="range" min="0" max="2" step="1" value="1"
+        aria-label="Image and audio resolution: 0 low, 1 medium, 2 high" />
+    </div>
+    <p id="mm-count"></p>
+  </div>
+
+  <div class="dg-stage">
+    <div class="mm-media">
+      <div class="mm-col-img">
+        <p class="mm-medialab">Image, cut into patch tokens</p>
+        <div class="mm-img" id="mm-img">
+          <!-- receipt content (sits under the patch grid) -->
+          <div class="mm-rbar dark" style="left:7%;top:9%;width:42%;height:9%"></div>
+          <div class="mm-rbar" style="right:7%;top:10%;width:18%;height:6%"></div>
+          <div class="mm-rbar" style="left:7%;top:30%;width:40%;height:5%"></div>
+          <div class="mm-rbar" style="right:7%;top:30%;width:13%;height:5%"></div>
+          <div class="mm-rbar" style="left:7%;top:42%;width:52%;height:5%"></div>
+          <div class="mm-rbar" style="right:7%;top:42%;width:13%;height:5%"></div>
+          <div class="mm-rbar" style="left:7%;top:54%;width:34%;height:5%"></div>
+          <div class="mm-rbar" style="right:7%;top:54%;width:13%;height:5%"></div>
+          <div class="mm-rdiv" style="top:70%"></div>
+          <div class="mm-rtotal" style="left:7%;top:78%">TOTAL</div>
+          <div class="mm-rtotal" style="right:7%;top:78%">$48.20</div>
+          <div class="mm-grid" id="mm-grid" role="group" aria-label="Image patch grid"></div>
+        </div>
+      </div>
+
+      <div class="mm-col-aud">
+        <p class="mm-medialab">Audio, cut into frame tokens</p>
+        <div class="mm-aud">
+          <div class="mm-mid"></div>
+          <div class="mm-wave" id="mm-wave" role="group" aria-label="Audio frame slices"></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="mm-streamlab">The one stream the model reads, left to right</p>
+    <div class="mm-stream" id="mm-stream"></div>
+
+    <p id="mm-read"></p>
+  </div>
+
+  <div id="mm-note"></div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:color-mix(in srgb, var(--accent) 9%, var(--panel));border:1px solid var(--accent)"></i> image patch token</span>
+    <span><i class="dg-swatch" style="background:color-mix(in srgb, var(--accent2) 9%, var(--panel));border:1px solid var(--accent2)"></i> audio frame token</span>
+    <span><i class="dg-swatch" style="background:var(--panel2);border:1px solid var(--line)"></i> text token</span>
+    <span><i class="dg-swatch is-dot" style="background:var(--gold)"></i> the one you are pointing at</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var TEXT = ['Read', 'this', 'receipt', 'and', 'clip'];
+  var LEVELS = [
+    { name: 'Low',    cols: 3, rows: 2, frames: 4,
+      note: 'Coarse tiles: fine detail like the small $48.20 total blurs across too few patches to read. Cheapest, fewest tokens.' },
+    { name: 'Medium', cols: 4, rows: 3, frames: 7,
+      note: 'More tiles per region: small text starts to resolve and speech is sampled more finely. Moderate token cost.' },
+    { name: 'High',   cols: 6, rows: 4, frames: 12,
+      note: 'Many tiles cover every detail, so the total is legible, but this is the most tokens, which means the most cost and latency.' }
+  ];
+  var DEFAULT_READ = 'Hover a tile or a wave slice: its token lights up in the stream, sitting right alongside the words.';
+
+  var gridEl = root.querySelector('#mm-grid');
+  var waveEl = root.querySelector('#mm-wave');
+  var streamEl = root.querySelector('#mm-stream');
+  var readEl = root.querySelector('#mm-read');
+  var noteEl = root.querySelector('#mm-note');
+  var countEl = root.querySelector('#mm-count');
+  var lvlEl = root.querySelector('#mm-lvl');
+  var slider = root.querySelector('#mm-res');
+
+  // speech-like envelope so the waveform looks like a voice, not noise
+  function waveH(i, n) {
+    var x = n > 1 ? i / (n - 1) : 0.5;
+    var a = Math.abs(Math.sin(x * Math.PI * 3.1 + 0.5)) * (0.45 + 0.55 * Math.abs(Math.sin(x * Math.PI * 1.2 + 0.3)));
+    return Math.max(0.18, Math.min(1, 0.25 + 0.75 * a));
+  }
+
+  function linkPair(src, chip, label) {
+    function on() {
+      src.classList.add('is-hot');
+      chip.classList.add('is-hot');
+      readEl.innerHTML = label;
+    }
+    function off() {
+      src.classList.remove('is-hot');
+      chip.classList.remove('is-hot');
+      readEl.innerHTML = DEFAULT_READ;
+    }
+    src.addEventListener('mouseenter', on);
+    src.addEventListener('mouseleave', off);
+    src.addEventListener('focus', on);
+    src.addEventListener('blur', off);
+    chip.addEventListener('mouseenter', on);
+    chip.addEventListener('mouseleave', off);
+  }
+
+  function build(li) {
+    var L = LEVELS[li];
+    var imgN = L.cols * L.rows;
+    var audN = L.frames;
+    var total = TEXT.length + imgN + audN;
+
+    gridEl.innerHTML = '';
+    waveEl.innerHTML = '';
+    streamEl.innerHTML = '';
+
+    // text tokens first in the stream
+    TEXT.forEach(function (w) {
+      var c = document.createElement('span');
+      c.className = 'mm-word';
+      c.textContent = w;
+      streamEl.appendChild(c);
+    });
+    streamEl.appendChild(sep());
+
+    // image: patch grid + matching chips
+    gridEl.style.gridTemplateColumns = 'repeat(' + L.cols + ', 1fr)';
+    gridEl.style.gridTemplateRows = 'repeat(' + L.rows + ', 1fr)';
+    for (var i = 0; i < imgN; i++) {
+      var pos = TEXT.length + i + 1;
+      var label = 'Image patch <b>' + (i + 1) + '</b> is token <b>' + pos +
+        '</b> of ' + total + ' in the one shared stream.';
+
+      var patch = document.createElement('button');
+      patch.type = 'button';
+      patch.className = 'mm-patch';
+      patch.setAttribute('aria-label', 'Image patch ' + (i + 1) + ', token ' + pos + ' of ' + total);
+
+      var chip = document.createElement('span');
+      chip.className = 'mm-tok mm-tok-img';
+      chip.textContent = (i + 1);
+      chip.setAttribute('aria-hidden', 'true');
+
+      gridEl.appendChild(patch);
+      streamEl.appendChild(chip);
+      linkPair(patch, chip, label);
+    }
+    streamEl.appendChild(sep());
+
+    // audio: frame slices + matching chips
+    for (var j = 0; j < audN; j++) {
+      var apos = TEXT.length + imgN + j + 1;
+      var alabel = 'Audio frame <b>' + (j + 1) + '</b> is token <b>' + apos +
+        '</b> of ' + total + ', read the same way as the tiles and words.';
+
+      var frame = document.createElement('button');
+      frame.type = 'button';
+      frame.className = 'mm-frame';
+      frame.setAttribute('aria-label', 'Audio frame ' + (j + 1) + ', token ' + apos + ' of ' + total);
+      var bar = document.createElement('span');
+      bar.className = 'bar';
+      bar.style.height = Math.round(waveH(j, audN) * 100) + '%';
+      frame.appendChild(bar);
+
+      var achip = document.createElement('span');
+      achip.className = 'mm-tok mm-tok-aud';
+      achip.textContent = (j + 1);
+      achip.setAttribute('aria-hidden', 'true');
+
+      waveEl.appendChild(frame);
+      streamEl.appendChild(achip);
+      linkPair(frame, achip, alabel);
+    }
+
+    lvlEl.textContent = L.name;
+    countEl.innerHTML = TEXT.length + ' text + ' + imgN + ' image + ' + audN +
+      ' audio = <b>' + total + ' tokens</b>';
+    noteEl.innerHTML = '<b>' + L.name + ' resolution.</b> ' + L.note;
+    readEl.innerHTML = DEFAULT_READ;
+
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  function sep() {
+    var s = document.createElement('span');
+    s.className = 'mm-sep';
+    s.setAttribute('aria-hidden', 'true');
+    return s;
+  }
+
+  slider.addEventListener('input', function () {
+    build(parseInt(slider.value, 10) || 0);
+  });
+
+  build(1);
+})();
+</script>
+</body>
+</html>

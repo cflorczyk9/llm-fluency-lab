@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="posttraining">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How a raw model becomes an assistant</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* posttraining-only: the three-checkpoint stepper and the chat panel */
+  #pt-flow .dg-node {
+    flex: 1 1 150px;
+    cursor: pointer;
+    appearance: none;
+    text-align: left;
+    font-family: inherit;
+  }
+  #pt-flow .step-no {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent2);
+  }
+  #pt-flow .dg-node.is-active .step-no {
+    color: var(--accent2);
+  }
+  .pt-chat {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .pt-msg {
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 9px 12px;
+  }
+  .pt-msg .pt-who {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 3px;
+  }
+  .pt-user {
+    background: var(--panel2);
+    align-self: flex-start;
+    max-width: 92%;
+  }
+  .pt-user .pt-body {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .pt-assistant {
+    background: var(--panel);
+    align-self: stretch;
+  }
+  .pt-assistant.is-raw {
+    border-color: var(--gap);
+    background: #fdf3f2;
+  }
+  .pt-assistant.is-aligned {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .pt-assistant .pt-who b {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .pt-assistant .pt-body {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .pt-assistant.is-raw .pt-body {
+    color: #7a5450;
+    font-family: var(--dg-mono);
+    font-size: 11.5px;
+  }
+  .pt-method {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0;
+  }
+  .pt-method b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .pt-note {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-style: italic;
+    margin: 6px 0 0;
+  }
+  .pt-meter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 11px;
+  }
+  .pt-meter .pt-mlabel {
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .pt-meter .dg-track {
+    height: 14px;
+  }
+  .pt-verdict {
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent2);
+    min-width: 66px;
+    text-align: right;
+  }
+  .pt-divider {
+    height: 1px;
+    background: var(--line);
+    margin: 11px 0;
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Post-training &amp; alignment</p>
+    <h1 class="dg-title">How a raw model becomes an assistant</h1>
+  </div>
+  <p class="dg-caption">
+    One prompt, three checkpoints. A base model only continues text. Alignment
+    is <b>added after pretraining</b>, step by step: first by copying human
+    demonstrations, then by learning which answers people prefer. Click a step.
+  </p>
+
+  <div class="dg-stage">
+    <div class="dg-flow" id="pt-flow">
+      <button class="dg-node is-interactive is-active" data-stage="0" type="button"
+        aria-label="Step 1: base model, pretraining only">
+        <span class="step-no">Step 1</span>
+        <span class="dg-node-title">Base model</span>
+        <span class="dg-node-sub">pretraining only</span>
+      </button>
+      <span class="dg-wire" aria-hidden="true"></span>
+      <button class="dg-node is-interactive" data-stage="1" type="button"
+        aria-label="Step 2: add supervised fine-tuning on demonstrations">
+        <span class="step-no">Step 2</span>
+        <span class="dg-node-title">+ SFT</span>
+        <span class="dg-node-sub">imitate demonstrations</span>
+      </button>
+      <span class="dg-wire" aria-hidden="true"></span>
+      <button class="dg-node is-interactive" data-stage="2" type="button"
+        aria-label="Step 3: add reinforcement learning from human feedback">
+        <span class="step-no">Step 3</span>
+        <span class="dg-node-title">+ RLHF</span>
+        <span class="dg-node-sub">learn from preferences</span>
+      </button>
+    </div>
+    <p class="dg-rowlabel" style="margin:9px 0 0; text-align:center; color:var(--accent2)">
+      alignment is added along this arrow, after pretraining
+    </p>
+
+    <div class="pt-divider"></div>
+
+    <p class="pt-method" id="pt-method" aria-live="polite"></p>
+
+    <div style="height:11px"></div>
+    <div class="pt-chat">
+      <div class="pt-msg pt-user">
+        <p class="pt-who">User prompt (fixed)</p>
+        <p class="pt-body">How do I reset my password?</p>
+      </div>
+      <div class="pt-msg pt-assistant" id="pt-out" aria-live="polite">
+        <p class="pt-who">Model output as <span id="pt-art">a</span> <b id="pt-role">raw text completer</b></p>
+        <p class="pt-body" id="pt-body"></p>
+      </div>
+    </div>
+    <p class="pt-note" id="pt-note"></p>
+
+    <div class="pt-meter">
+      <span class="pt-mlabel">Answer quality</span>
+      <div class="dg-track"><div class="dg-bar" id="pt-bar"></div></div>
+      <span class="pt-verdict" id="pt-verdict"></span>
+    </div>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--gap)"></i> raw, off-task output</span>
+    <span><i class="dg-swatch" style="background:var(--accent)"></i> aligned, preferred output</span>
+    <span>Same facts throughout: these steps change behavior, not knowledge.</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  var reduce = false;
+  try {
+    reduce = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (e) {}
+
+  var STAGES = [
+    {
+      role: 'raw text completer',
+      method: '<b>Pretraining only.</b> It learned one skill: predict the next token from a huge pile of internet text. So it just continues your words. Nothing ever told it that a question deserves an answer.',
+      out: 'How do I change my email?<br>How do I update my billing?<br>How do I cancel my plan?<br>Frequently asked questions / Account help / ...',
+      raw: true,
+      aligned: false,
+      note: 'Off-task: it pattern-matches your line to an FAQ page and keeps writing.',
+      q: 24,
+      verdict: 'Rambling'
+    },
+    {
+      role: 'instruction follower',
+      method: '<b>Supervised fine-tuning (SFT).</b> Now trained on thousands of human-written (question, ideal answer) pairs. By imitating them it learns the shape of a good answer: answer directly, then stop.',
+      out: 'Go to Settings, open Security, and choose Reset password. Enter your email and follow the link we send.',
+      raw: false,
+      aligned: false,
+      note: 'On-task and direct, but plain: it can only imitate the demonstrations it was shown.',
+      q: 64,
+      verdict: 'Helpful'
+    },
+    {
+      role: 'aligned assistant',
+      method: '<b>RLHF.</b> Humans rank pairs of answers, a reward model learns those picks, then RL nudges the model toward the preferred one. This pushes past what copying demonstrations alone can reach.',
+      out: 'Sure, here is how to reset it:<br>1. Open Settings, then Security.<br>2. Click Reset password.<br>3. Check your email for the link (it expires in 1 hour, so look in spam if it is missing).<br>Still stuck? Send me your login email and I can flag it for support.',
+      raw: false,
+      aligned: true,
+      note: 'Clearer, safer, anticipates the next need: the behavior people actually prefer.',
+      q: 95,
+      verdict: 'Preferred'
+    }
+  ];
+
+  var nodes = Array.prototype.slice.call(root.querySelectorAll('#pt-flow .dg-node'));
+  var wires = Array.prototype.slice.call(root.querySelectorAll('#pt-flow .dg-wire'));
+  var methodEl = root.querySelector('#pt-method');
+  var roleEl = root.querySelector('#pt-role');
+  var artEl = root.querySelector('#pt-art');
+  var bodyEl = root.querySelector('#pt-body');
+  var noteEl = root.querySelector('#pt-note');
+  var outEl = root.querySelector('#pt-out');
+  var barEl = root.querySelector('#pt-bar');
+  var verdictEl = root.querySelector('#pt-verdict');
+
+  var cur = -1;
+  var timer = null;
+
+  function show(i, fromUser) {
+    cur = i;
+    var s = STAGES[i];
+    nodes.forEach(function (n, k) { n.classList.toggle('is-active', k === i); });
+    wires.forEach(function (w, k) { w.classList.toggle('is-active', k < i); });
+    methodEl.innerHTML = s.method;
+    roleEl.textContent = s.role;
+    if (artEl) artEl.textContent = /^[aeiou]/i.test(s.role) ? 'an' : 'a';
+    bodyEl.innerHTML = s.out;
+    noteEl.textContent = s.note;
+    outEl.classList.toggle('is-raw', !!s.raw);
+    outEl.classList.toggle('is-aligned', !!s.aligned);
+    barEl.style.background = s.raw ? 'var(--gap)' : (s.aligned ? 'var(--accent)' : 'var(--accent2)');
+    barEl.style.width = s.q + '%';
+    verdictEl.textContent = s.verdict;
+    verdictEl.style.color = s.raw ? 'var(--gap)' : 'var(--accent2)';
+    if (fromUser) stop();
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+  }
+
+  nodes.forEach(function (n) {
+    n.addEventListener('click', function () {
+      show(parseInt(n.getAttribute('data-stage'), 10), true);
+    });
+  });
+
+  show(0, false);
+  if (!reduce) {
+    timer = setInterval(function () { show((cur + 1) % STAGES.length, false); }, 4200);
+  }
+})();
+</script>
+</body>
+</html>

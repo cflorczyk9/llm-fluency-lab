@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="serving">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Batching: throughput versus latency</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* serving-only: the request -> batch -> GPU -> stream path and its bars */
+  #srv .srv-flow { align-items: stretch; }
+  #srv .srv-node { flex: 1 1 130px; min-width: 120px; }
+
+  /* batch slots: each filled pip is one request riding the GPU together */
+  .srv-slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 7px;
+  }
+  .srv-slots i {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    background: var(--line);
+    display: inline-block;
+  }
+  .srv-slots i.is-on { background: var(--accent); }
+  .srv-slots .more {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--accent2);
+    line-height: 9px;
+    align-self: center;
+  }
+
+  /* the GPU node pulses busier as the batch fills it */
+  #srv-gpu { transition: box-shadow 0.25s ease; }
+
+  /* output lane: dots streaming out, denser when total throughput is higher */
+  .srv-out { overflow: hidden; }
+  .srv-lane {
+    position: relative;
+    height: 16px;
+    margin-top: 8px;
+    border-radius: 8px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .srv-dot {
+    position: absolute;
+    top: 50%;
+    left: -9px;
+    width: 7px;
+    height: 7px;
+    margin-top: -3.5px;
+    border-radius: 50%;
+    background: var(--accent2);
+    transition-property: left;
+    transition-timing-function: linear;
+  }
+  .srv-dot.is-static { transition: none; }
+
+  /* outcome bars get a wider value column than the shared default */
+  #srv .srv-bars .dg-bar-label { flex-basis: 122px; }
+  #srv .srv-bars .dg-bar-val {
+    flex-basis: 108px;
+    text-align: left;
+    color: var(--ink);
+  }
+
+  .srv-verdict {
+    margin: 14px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+  .srv-verdict b { color: var(--ink); font-weight: 600; }
+
+  @media (max-width: 480px) {
+    #srv .srv-bars .dg-bar-label { flex-basis: 92px; font-size: 11px; }
+    #srv .srv-bars .dg-bar-val { flex-basis: 92px; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root" id="srv">
+  <div>
+    <p class="dg-kicker">Latency, throughput &amp; serving</p>
+    <h1 class="dg-title">One GPU, many requests: the batching trade</h1>
+  </div>
+  <p class="dg-caption">
+    Requests are packed into a <b>batch</b> and run through the model together, then
+    tokens stream back out. A bigger batch keeps the expensive GPU busy (more total
+    <b>throughput</b>), but every request now shares the chip, so each one waits longer
+    (more <b>latency</b>). Drag the slider.
+  </p>
+
+  <div class="dg-stage">
+    <div class="dg-flow srv-flow">
+      <div class="dg-node srv-node" style="background:var(--panel2)">
+        <span class="dg-node-title">Requests in</span>
+        <span class="dg-node-sub">users hit the API</span>
+      </div>
+      <span class="dg-wire" aria-hidden="true"></span>
+      <div class="dg-node srv-node" id="srv-batch">
+        <span class="dg-node-title">Batch</span>
+        <span class="dg-node-sub"><b id="srv-bcount" style="color:var(--accent2)">8</b> sharing the GPU</span>
+        <div class="srv-slots" id="srv-slots" aria-hidden="true"></div>
+      </div>
+      <span class="dg-wire" aria-hidden="true"></span>
+      <div class="dg-node srv-node is-accent" id="srv-gpu">
+        <span class="dg-node-title">GPU runs the model</span>
+        <span class="dg-node-sub">prefill, then decode</span>
+      </div>
+      <span class="dg-wire" aria-hidden="true"></span>
+      <div class="dg-node srv-node srv-out">
+        <span class="dg-node-title">Tokens stream out</span>
+        <span class="dg-node-sub">word by word</span>
+        <div class="srv-lane" id="srv-lane" role="img" aria-label="Tokens streaming out of the model"></div>
+      </div>
+    </div>
+
+    <div class="srv-bars" style="margin-top:16px">
+      <div class="dg-bar-row">
+        <span class="dg-bar-label">Throughput</span>
+        <div class="dg-track"><div class="dg-bar is-top" id="srv-thr-bar"></div></div>
+        <span class="dg-bar-val" id="srv-thr-val">1371 tok/s</span>
+      </div>
+      <div class="dg-bar-row">
+        <span class="dg-bar-label">Per-request wait</span>
+        <div class="dg-track"><div class="dg-bar is-gold" id="srv-lat-bar"></div></div>
+        <span class="dg-bar-val" id="srv-lat-val">1.6 s</span>
+      </div>
+      <div class="dg-bar-row">
+        <span class="dg-bar-label">GPU in use</span>
+        <div class="dg-track"><div class="dg-bar" id="srv-util-bar"></div></div>
+        <span class="dg-bar-val" id="srv-util-val">57%</span>
+      </div>
+    </div>
+
+    <p class="srv-verdict" id="srv-verdict" aria-live="polite"></p>
+  </div>
+
+  <div class="dg-controls" style="align-items:flex-end">
+    <div class="dg-slider-wrap">
+      <label class="dg-slider-lab" for="srv-batch-slider">
+        <span>Batch size (requests on one GPU)</span><b id="srv-batch-val">8</b>
+      </label>
+      <input class="dg-slider" id="srv-batch-slider" type="range"
+        min="1" max="32" step="1" value="8"
+        aria-label="Batch size: number of requests sharing one GPU" />
+    </div>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--accent2)"></i> throughput (total tokens/sec, all users)</span>
+    <span><i class="dg-swatch" style="background:var(--gold)"></i> per-request wait (one user's latency)</span>
+    <span><i class="dg-swatch" style="background:var(--accent)"></i> GPU utilization</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.getElementById('srv');
+  if (!root) return;
+
+  var reduceMotion = window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function bump() { if (window.reportDiagramHeight) window.reportDiagramHeight(); }
+
+  // --- a simple, honest serving model ---------------------------------------
+  // A GPU has a fixed throughput ceiling. Total throughput rises with batch size
+  // but saturates (diminishing returns). The per-request share is the ceiling
+  // split across the batch, so each request slows as the batch grows. Latency is
+  // the time to generate one fixed-length (OUT-token) answer at that shared rate,
+  // plus a little batch-assembly overhead.
+  var TMAX = 2400;   // GPU throughput ceiling, tokens/sec when fully batched
+  var K = 6;          // how fast utilization climbs toward the ceiling
+  var OUT = 240;      // fixed answer length, tokens
+
+  function metrics(B) {
+    var thr = TMAX * B / (B + K);          // total tokens/sec across the batch
+    var perReq = TMAX / (B + K);           // tokens/sec for one request
+    var lat = 0.15 + 0.01 * B + OUT / perReq; // assemble + generate one answer
+    var util = (B / (B + K)) * 100;        // share of the ceiling reached
+    return { thr: thr, perReq: perReq, lat: lat, util: util };
+  }
+
+  // axis maxima (computed at B = 32 so bars fill the track at the extreme)
+  var THR_MAX = TMAX * 32 / (32 + K) * 1.04;
+  var LAT_MAX = (0.15 + 0.01 * 32 + OUT / (TMAX / (32 + K))) * 1.04;
+
+  var els = {
+    slots: root.querySelector('#srv-slots'),
+    bcount: root.querySelector('#srv-bcount'),
+    gpu: root.querySelector('#srv-gpu'),
+    thrBar: root.querySelector('#srv-thr-bar'),
+    thrVal: root.querySelector('#srv-thr-val'),
+    latBar: root.querySelector('#srv-lat-bar'),
+    latVal: root.querySelector('#srv-lat-val'),
+    utilBar: root.querySelector('#srv-util-bar'),
+    utilVal: root.querySelector('#srv-util-val'),
+    verdict: root.querySelector('#srv-verdict'),
+    slider: root.querySelector('#srv-batch-slider'),
+    sliderVal: root.querySelector('#srv-batch-val'),
+    lane: root.querySelector('#srv-lane')
+  };
+
+  var MAX_PIPS = 12;
+  function renderSlots(B) {
+    els.slots.innerHTML = '';
+    var shown = Math.min(B, MAX_PIPS);
+    for (var i = 0; i < MAX_PIPS; i++) {
+      var pip = document.createElement('i');
+      if (i < shown) pip.className = 'is-on';
+      els.slots.appendChild(pip);
+    }
+    if (B > MAX_PIPS) {
+      var more = document.createElement('span');
+      more.className = 'more';
+      more.textContent = '+' + (B - MAX_PIPS);
+      els.slots.appendChild(more);
+    }
+  }
+
+  function verdictFor(B, m) {
+    var lat = m.lat.toFixed(1);
+    var util = Math.round(m.util);
+    if (B <= 2) {
+      return 'A batch of <b>' + B + '</b>: this user gets a near instant reply, but the ' +
+        'GPU runs only <b>' + util + '% busy</b>. Snappy, yet an expensive chip mostly sits idle.';
+    }
+    if (B <= 8) {
+      return 'A batch of <b>' + B + '</b>: a healthy middle. Throughput is strong and each ' +
+        'request still finishes in about <b>' + lat + ' s</b>.';
+    }
+    if (B <= 20) {
+      return 'A batch of <b>' + B + '</b>: throughput is climbing toward the ceiling and the ' +
+        'GPU is <b>' + util + '% busy</b>, but each request now waits about <b>' + lat + ' s</b>.';
+    }
+    return 'A batch of <b>' + B + '</b>: the GPU is packed (<b>' + util + '%</b>) for top ' +
+      'throughput, yet every request pays about <b>' + lat + ' s</b> of latency. The classic trade.';
+  }
+
+  // --- streaming dots: emission rate tracks total throughput ----------------
+  var streamTimer = null;
+  function clearStream() {
+    if (streamTimer) { clearTimeout(streamTimer); streamTimer = null; }
+  }
+  function laneWidth() {
+    return els.lane.clientWidth || 180;
+  }
+  function spawnDot() {
+    if (els.lane.childElementCount > 16) return; // safety cap, no leak
+    var dot = document.createElement('div');
+    dot.className = 'srv-dot';
+    var dur = 1.05;
+    dot.style.transitionDuration = dur + 's';
+    els.lane.appendChild(dot);
+    // force reflow so the transition runs from the start position
+    void dot.offsetWidth;
+    dot.style.left = (laneWidth() + 9) + 'px';
+    var done = false;
+    function remove() { if (!done) { done = true; if (dot.parentNode) dot.parentNode.removeChild(dot); } }
+    dot.addEventListener('transitionend', remove);
+    setTimeout(remove, dur * 1000 + 400);
+  }
+  function runStream(thr) {
+    clearStream();
+    if (reduceMotion) {
+      // static representation: a few evenly spaced dots, denser at high throughput
+      els.lane.innerHTML = '';
+      var n = Math.max(2, Math.min(8, Math.round(thr / 280)));
+      var w = laneWidth();
+      for (var i = 0; i < n; i++) {
+        var d = document.createElement('div');
+        d.className = 'srv-dot is-static';
+        d.style.left = (((i + 0.5) / n) * (w - 9)) + 'px';
+        els.lane.appendChild(d);
+      }
+      return;
+    }
+    // emission interval shrinks as throughput rises => denser stream out
+    var interval = Math.max(60, 130000 / thr);
+    function tick() {
+      spawnDot();
+      streamTimer = setTimeout(tick, interval);
+    }
+    tick();
+  }
+
+  function update(B) {
+    var m = metrics(B);
+
+    els.sliderVal.textContent = B;
+    els.bcount.textContent = B;
+    renderSlots(B);
+
+    // GPU "busier" glow scales with utilization
+    var glow = (m.util / 100);
+    els.gpu.style.boxShadow = '0 0 0 1px var(--accent2), 0 ' +
+      (2 + glow * 8).toFixed(1) + 'px ' + (8 + glow * 18).toFixed(1) +
+      'px rgba(11,83,148,' + (0.14 + glow * 0.26).toFixed(2) + ')';
+
+    els.thrBar.style.width = Math.min(100, (m.thr / THR_MAX) * 100).toFixed(1) + '%';
+    els.thrVal.textContent = Math.round(m.thr) + ' tok/s';
+
+    els.latBar.style.width = Math.min(100, (m.lat / LAT_MAX) * 100).toFixed(1) + '%';
+    els.latVal.textContent = m.lat.toFixed(1) + ' s';
+
+    els.utilBar.style.width = m.util.toFixed(1) + '%';
+    els.utilVal.textContent = Math.round(m.util) + '%';
+
+    els.verdict.innerHTML = verdictFor(B, m);
+
+    runStream(m.thr);
+    bump();
+  }
+
+  els.slider.addEventListener('input', function () {
+    update(parseInt(els.slider.value, 10));
+  });
+  window.addEventListener('resize', function () {
+    if (reduceMotion) update(parseInt(els.slider.value, 10));
+  });
+
+  update(parseInt(els.slider.value, 10));
+})();
+</script>
+</body>
+</html>

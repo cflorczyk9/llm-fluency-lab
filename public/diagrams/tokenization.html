@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="tokenization">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tokenization &amp; Embeddings</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* ---- module-level: step labels + spacing for the two stacked parts ---- */
+  .dg-steplabel{
+    font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--accent2); margin:0 0 4px;
+  }
+  .dg-part{ display:flex; flex-direction:column; gap:8px; }
+  .dg-part-divider{ height:1px; background:var(--line); margin:4px 0 2px; border:0; }
+
+  /* ============================================================= */
+  /* Part 1 viz-specific CSS (token splitter), scoped to #sec-tokens */
+  /* ============================================================= */
+  #sec-tokens{
+    width:100%; max-width:960px; margin:0 auto;
+    display:flex; flex-direction:column; gap:16px;
+  }
+  #sec-tokens *{ box-sizing:border-box; }
+
+  #sec-tokens .viz-caption{
+    font-size:13.5px; color:var(--muted); margin:0; line-height:1.5;
+  }
+
+  #sec-tokens .viz-controls{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+  }
+  #sec-tokens .viz-btn{
+    appearance:none; cursor:pointer;
+    background:var(--panel); color:var(--ink);
+    border:1px solid var(--line); border-radius:999px;
+    padding:9px 16px; font-size:13px; font-weight:520;
+    font-family:inherit; line-height:1.2;
+    transition:border-color .18s ease, background .18s ease, color .18s ease, transform .12s ease;
+  }
+  #sec-tokens .viz-btn:hover{ border-color:var(--accent); background:var(--panel2); }
+  #sec-tokens .viz-btn:active{ transform:translateY(1px); }
+  #sec-tokens .viz-btn.is-active{
+    border-color:var(--accent); color:var(--accent2); background:var(--panel);
+    box-shadow:inset 0 0 0 1px var(--accent);
+  }
+  #sec-tokens .viz-btn-replay{
+    margin-left:auto; border-color:var(--line); color:var(--accent2);
+  }
+  #sec-tokens .viz-btn-replay:hover{ background:var(--panel2); border-color:var(--accent2); }
+  #sec-tokens .viz-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* Stage */
+  #sec-tokens .viz-stage{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:22px 24px 24px;
+    display:flex; flex-direction:column; gap:8px;
+    min-height:230px;
+  }
+  #sec-tokens .viz-rowlabel{
+    font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted);
+  }
+  #sec-tokens .viz-rowlabel + .viz-source{ margin-bottom:14px; }
+  #sec-tokens .viz-rowlabel + .viz-pills{ margin-top:6px; }
+
+  /* Plain-text source line */
+  #sec-tokens .viz-source{
+    font-size:22px; line-height:1.5; letter-spacing:0.01em;
+    min-height:34px;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    color:var(--ink);
+  }
+  #sec-tokens .viz-source .ch{
+    display:inline-block; white-space:pre;
+    transition:opacity .35s ease, transform .45s ease, color .35s ease;
+    will-change:opacity,transform;
+  }
+  #sec-tokens .viz-source.is-dim .ch{ opacity:.30; }
+
+  #sec-tokens .viz-divider{
+    height:1px; background:var(--line); margin:10px 0 4px;
+  }
+
+  /* Token pill row. Row gap is generous so adjacent pills (and the
+     sub-word rings) never visually merge; column gap leaves room for rings. */
+  #sec-tokens .viz-pills{
+    display:flex; flex-wrap:wrap; column-gap:12px; row-gap:24px; align-items:center;
+    min-height:46px;
+  }
+  #sec-tokens .pill{
+    --pc:var(--accent);
+    position:relative;
+    display:inline-flex; align-items:center;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    font-size:19px; font-weight:560; line-height:1;
+    padding:11px 13px; border-radius:11px; white-space:pre;
+    color:var(--ink); /* per-pill JS overrides to ink or white per fill for contrast */
+    background:var(--pc);
+    border:1px solid rgba(28,29,31,.12);
+    box-shadow:0 1px 2px rgba(28,29,31,.10);
+    opacity:0; transform:translate(var(--dx,0px),var(--dy,-14px)) scale(.82);
+    transition:opacity .42s cubic-bezier(.2,.7,.25,1),
+               transform .52s cubic-bezier(.2,.7,.25,1);
+    will-change:opacity,transform;
+  }
+  #sec-tokens .pill.is-in{ opacity:1; transform:translate(0,0) scale(1); }
+  /* space-character marker shown inside a pill so leading spaces are visible */
+  #sec-tokens .pill .spc{
+    display:inline-block; width:.62em; height:1.05em;
+    margin-right:2px; border-radius:3px;
+    background:rgba(255,255,255,.30);
+    position:relative; top:.06em;
+  }
+  #sec-tokens .pill .spc::after{
+    content:"\2423"; position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.9em; color:currentColor; opacity:.85;
+  }
+  /* faint index label under each token */
+  #sec-tokens .pill .idx{
+    position:absolute; left:0; right:0; bottom:-18px;
+    text-align:center; font-size:10.5px; color:var(--muted);
+    font-variant-numeric:tabular-nums;
+    opacity:0; transition:opacity .4s ease; pointer-events:none;
+  }
+  #sec-tokens .pill.is-in .idx{ opacity:1; }
+
+  /* the subword-split highlight: chips that came from one long word get a ring.
+     White inner gap keeps the red ring visible even on a red-filled token. */
+  #sec-tokens .pill.is-sub{
+    box-shadow:0 1px 2px rgba(28,29,31,.10),
+               0 0 0 2px #ffffff,
+               0 0 0 4px var(--gap);
+  }
+
+  /* Counters */
+  #sec-tokens .viz-counters{
+    display:flex; flex-wrap:wrap; gap:14px; margin-top:4px;
+  }
+  #sec-tokens .counter{
+    background:var(--panel2); border:1px solid var(--line);
+    border-radius:12px; padding:12px 18px;
+    display:flex; flex-direction:column; gap:3px; min-width:110px;
+  }
+  #sec-tokens .counter .num{
+    font-size:24px; font-weight:680; line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  #sec-tokens .counter .lbl{ font-size:11.5px; color:var(--muted); letter-spacing:.02em; }
+  #sec-tokens .counter.tokens .num{ color:var(--accent); }
+  #sec-tokens .counter.words .num{ color:var(--gold); }
+  #sec-tokens .counter.note{ justify-content:center; background:transparent; border-color:transparent; }
+  #sec-tokens .counter.note .lbl{ font-size:12.5px; color:var(--muted); max-width:240px; line-height:1.45; }
+  #sec-tokens .counter.note b{ color:var(--gap); font-weight:600; }
+
+  #sec-tokens .viz-legend{
+    display:flex; flex-wrap:wrap; gap:16px; font-size:12px; color:var(--muted);
+  }
+  #sec-tokens .viz-legend span{ display:inline-flex; align-items:center; gap:7px; }
+  #sec-tokens .swatch{ width:13px; height:13px; border-radius:4px; display:inline-block; }
+  #sec-tokens .swatch.sub{ box-shadow:inset 0 0 0 2px var(--gap); background:var(--panel); }
+  #sec-tokens .swatch.spc{ background:var(--accent); position:relative; }
+  #sec-tokens .swatch.spc::after{ content:"\2423"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+
+  @media (max-width:560px){
+    #sec-tokens .viz-source{ font-size:18px; }
+    #sec-tokens .pill{ font-size:16px; padding:9px 10px; }
+    #sec-tokens .viz-btn-replay{ margin-left:0; }
+  }
+
+  /* Reduced-motion fallback: pills appear instantly, no flying-apart */
+  @media (prefers-reduced-motion:reduce){
+    #sec-tokens .viz-source .ch,
+    #sec-tokens .pill,
+    #sec-tokens .pill .idx{ transition:none !important; }
+    #sec-tokens .pill{ opacity:1; transform:none; }
+    #sec-tokens .pill .idx{ opacity:.85; }
+  }
+
+  /* ================================================================ */
+  /* Part 2 viz-specific CSS (meaning space), scoped to #sec-embeddings */
+  /* ================================================================ */
+  #sec-embeddings{
+    display:block; width:100%; max-width:960px; margin:0 auto;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;
+  }
+  #sec-embeddings *{box-sizing:border-box;}
+  #sec-embeddings .emb-sub{color:var(--muted); font-size:13.5px; margin:0 0 12px; max-width:62ch;}
+
+  #sec-embeddings .emb-shell{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden; box-shadow:0 1px 2px rgba(28,29,31,.08);
+  }
+  #sec-embeddings .emb-stage{
+    position:relative; width:100%; aspect-ratio:16/10; background:var(--panel2);
+    min-height:320px;
+  }
+  #sec-embeddings canvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
+  #sec-embeddings .emb-labels{position:absolute; inset:0; pointer-events:none;}
+  #sec-embeddings .emb-word{
+    position:absolute; transform:translate(-50%,-50%);
+    pointer-events:auto; cursor:pointer; user-select:none;
+    padding:5px 11px; border-radius:999px; font-size:13.5px; font-weight:650;
+    color:var(--ink); white-space:nowrap;
+    background:rgba(255,255,255,.9); border:1px solid var(--line);
+    box-shadow:0 1px 3px rgba(28,29,31,.08);
+    backdrop-filter:blur(2px);
+    transition:transform .14s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    will-change:left,top;
+  }
+  #sec-embeddings .emb-word:hover,
+  #sec-embeddings .emb-word.is-active{
+    transform:translate(-50%,-50%) scale(1.07);
+    box-shadow:0 0 0 1.5px var(--clr,var(--accent)), 0 6px 16px rgba(28,29,31,.16);
+    border-color:var(--clr,var(--accent));
+    background:#ffffff; z-index:5;
+  }
+  #sec-embeddings .emb-word:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+  #sec-embeddings .emb-word .emb-dot{
+    display:inline-block; width:8px; height:8px; border-radius:50%;
+    background:var(--clr,var(--accent)); margin-right:7px; vertical-align:middle;
+    box-shadow:0 0 0 2px rgba(255,255,255,.9);
+  }
+  #sec-embeddings .emb-word.is-dim{opacity:.32;}
+
+  #sec-embeddings .emb-readout{
+    position:absolute; left:14px; bottom:14px; right:14px;
+    pointer-events:none; display:flex; gap:10px; align-items:flex-end; justify-content:space-between;
+    flex-wrap:wrap;
+  }
+  #sec-embeddings .emb-tip{
+    pointer-events:none; max-width:60%;
+    background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:10px;
+    padding:9px 12px; font-size:13px; color:var(--muted);
+    box-shadow:0 4px 14px rgba(28,29,31,.1);
+    backdrop-filter:blur(4px); transition:opacity .25s ease;
+  }
+  #sec-embeddings .emb-tip b{color:var(--ink); font-weight:700;}
+  #sec-embeddings .emb-tip .emb-near{color:var(--accent2); font-weight:700;}
+  #sec-embeddings .emb-legend{
+    position:absolute; right:14px; top:14px; pointer-events:none;
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; max-width:70%;
+  }
+  #sec-embeddings .emb-leg{
+    display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--ink);
+    background:rgba(255,255,255,.85); padding:3px 9px; border-radius:999px; border:1px solid var(--line);
+    box-shadow:0 1px 2px rgba(28,29,31,.06);
+  }
+  #sec-embeddings .emb-leg i{width:9px; height:9px; border-radius:50%; display:inline-block;}
+
+  #sec-embeddings .emb-controls{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    padding:14px 16px; border-top:1px solid var(--line); background:var(--panel);
+  }
+  #sec-embeddings button{
+    font:inherit; font-size:13.5px; font-weight:650; color:var(--ink);
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:9px 14px; cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, transform .08s ease, color .15s ease, box-shadow .15s ease;
+  }
+  #sec-embeddings button:hover{border-color:var(--accent); background:#fff;}
+  #sec-embeddings button:active{transform:translateY(1px);}
+  #sec-embeddings button.is-primary{
+    background:var(--accent); border-color:var(--accent2); color:#fff;
+  }
+  #sec-embeddings button.is-primary:hover{
+    background:var(--accent2); border-color:var(--accent2); color:#fff;
+  }
+  #sec-embeddings button.is-gold{
+    background:#fff; border-color:var(--gold); color:var(--gold);
+  }
+  #sec-embeddings button.is-gold:hover{
+    background:var(--gold); border-color:var(--gold); color:#fff;
+  }
+  #sec-embeddings button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  #sec-embeddings .emb-spacer{flex:1 1 auto;}
+  #sec-embeddings .emb-hint{font-size:12.5px; color:var(--muted);}
+
+  #sec-embeddings .emb-foot{
+    padding:14px 16px 18px; border-top:1px solid var(--line); color:var(--muted); font-size:13px;
+  }
+  #sec-embeddings .emb-foot b{color:var(--ink);}
+
+  @media (max-width:560px){
+    #sec-embeddings .emb-tip{max-width:100%;}
+    #sec-embeddings .emb-legend{position:static; max-width:100%; justify-content:flex-start; padding:10px 14px 0;}
+    #sec-embeddings .emb-word{font-size:12px; padding:4px 9px;}
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Tokenization &amp; Embeddings</p>
+    <h1 class="dg-title">From your words to points in meaning space</h1>
+    <p class="dg-caption">
+      Two steps happen before a model can think: first your text is split into
+      tokens (chunks, not whole words), then each token becomes a point where
+      similar meanings sit close together.
+    </p>
+  </div>
+
+  <!-- ============== PART 1: token splitter ============== -->
+  <div class="dg-part">
+    <p class="dg-steplabel">Step 1 &middot; Tokenization</p>
+    <section class="viz" id="sec-tokens">
+      <p class="viz-caption">Watch a sentence fly apart into the pieces a model actually reads. The boundaries are not where you would put them.</p>
+
+      <div class="viz-controls">
+        <button class="viz-btn" data-ex="0" type="button" aria-label="Example: a normal sentence">Normal sentence</button>
+        <button class="viz-btn" data-ex="1" type="button" aria-label="Example: a rare long word">Rare long word</button>
+        <button class="viz-btn" data-ex="2" type="button" aria-label="Example: a number and an emoji">Number + emoji</button>
+        <button class="viz-btn viz-btn-replay" data-replay type="button" aria-label="Replay the current example">Replay</button>
+      </div>
+
+      <div class="viz-stage">
+        <span class="viz-rowlabel">What you wrote</span>
+        <div class="viz-source" id="tok-source" aria-hidden="true"></div>
+        <div class="viz-divider"></div>
+        <span class="viz-rowlabel">What the model reads (tokens)</span>
+        <div class="viz-pills" id="tok-pills" aria-live="polite"></div>
+      </div>
+
+      <div class="viz-counters">
+        <div class="counter tokens"><span class="num" id="tok-count">0</span><span class="lbl">TOKENS</span></div>
+        <div class="counter words"><span class="num" id="word-count">0</span><span class="lbl">WORDS</span></div>
+        <div class="counter note"><span class="lbl">Tokens are <b>not</b> words. Rare words break into sub-word pieces, and the leading space stays attached inside the token.</span></div>
+      </div>
+
+      <div class="viz-legend">
+        <span><span class="swatch sub"></span> piece of one longer word</span>
+        <span><span class="swatch spc"></span> space lives inside the token</span>
+      </div>
+    </section>
+  </div>
+
+  <hr class="dg-part-divider" />
+
+  <!-- ============== PART 2: meaning space ============== -->
+  <div class="dg-part">
+    <p class="dg-steplabel">Step 2 &middot; Embeddings: meaning is a place in space</p>
+    <section class="viz" id="sec-embeddings">
+      <p class="emb-sub">Every token becomes a point. Words that mean similar things drift to the same neighborhood. Watch them sort themselves, then hover a word to see its closest neighbors.</p>
+
+      <div class="emb-shell">
+        <div class="emb-stage" id="emb-stage">
+          <canvas id="emb-canvas"></canvas>
+          <div class="emb-labels" id="emb-labels"></div>
+
+          <div class="emb-legend" id="emb-legend"></div>
+
+          <div class="emb-readout">
+            <div class="emb-tip" id="emb-tip">Press <b>Cluster</b> to sort the words by meaning, then hover any word.</div>
+          </div>
+        </div>
+
+        <div class="emb-controls">
+          <button id="emb-cluster" class="is-primary" type="button" aria-label="Cluster the words by meaning">Cluster by meaning</button>
+          <button id="emb-scatter" type="button" aria-label="Scramble the words to random positions">Scramble</button>
+          <button id="emb-analogy" class="is-gold" type="button" aria-label="Show the analogy king minus man plus woman">Show analogy: king - man + woman</button>
+          <div class="emb-spacer"></div>
+          <span class="emb-hint">Hover a word for nearest neighbors</span>
+        </div>
+
+        <div class="emb-foot">
+          <b>Why this matters.</b> Distance in this space equals difference in meaning. To search by idea instead of by keyword, you turn the query into a point and grab whatever sits nearest. That nearest-neighbor lookup is exactly what powers semantic search and the retrieval step in RAG.
+          <br><span style="color:var(--muted); font-size:12.5px;">Note: real embeddings live in hundreds of dimensions. This is an honest 2D flattening, so the relative neighborhoods hold even though the exact distances are simplified.</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+
+<!-- ============== Part 1 logic: token splitter ============== -->
+<script>
+(function(){
+  var root = document.getElementById('sec-tokens');
+  if(!root) return;
+
+  function reportH(){ if(window.reportDiagramHeight) window.reportDiagramHeight(); }
+
+  var sourceEl = root.querySelector('#tok-source');
+  var pillsEl  = root.querySelector('#tok-pills');
+  var tokCountEl = root.querySelector('#tok-count');
+  var wordCountEl = root.querySelector('#word-count');
+  var buttons = Array.prototype.slice.call(root.querySelectorAll('.viz-btn[data-ex]'));
+  var replayBtn = root.querySelector('[data-replay]');
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Token fill colors. Two map keys: bg (fill) + fg (legible text on that fill).
+  // Adjacent tokens always differ. Blue + amber take dark ink; deep-blue + red take white.
+  var COLORS = [
+    {bg:'var(--accent)',  fg:'var(--ink)'},
+    {bg:'var(--accent2)', fg:'#ffffff'},
+    {bg:'var(--gold)',    fg:'var(--ink)'},
+    {bg:'var(--gap)',     fg:'#ffffff'}
+  ];
+
+  // Each example: full text + an ordered list of token strings whose
+  // concatenation EXACTLY reconstructs the text. sub:true marks pieces that
+  // came from breaking one longer word into multiple sub-word tokens.
+  // A literal leading space inside a token string is the space the tokenizer
+  // attaches to the front of a word.
+  var EXAMPLES = [
+    {
+      // Everyday sentence. "Tokenization" is rare enough to split; the rest
+      // are common whole-word tokens that carry their leading space.
+      text: "Tokenization breaks text into pieces.",
+      tokens: [
+        {t:"Token", sub:true}, {t:"ization", sub:true},
+        {t:" breaks"}, {t:" text"}, {t:" into"}, {t:" pieces"}, {t:"."}
+      ]
+    },
+    {
+      // One very long rare word that shatters into many sub-word tokens,
+      // proving token count far exceeds word count (1 word -> 7 tokens).
+      text: "Antidisestablishmentarianism is uncommon.",
+      tokens: [
+        {t:"Ant", sub:true}, {t:"id", sub:true}, {t:"is", sub:true},
+        {t:"establishment", sub:true}, {t:"arian", sub:true}, {t:"ism", sub:true},
+        {t:" is"}, {t:" uncommon"}, {t:"."}
+      ]
+    },
+    {
+      // Numbers split into digit chunks and an emoji is its own single token
+      // (not a sub-word piece). Punctuation and "#" sit on their own too.
+      text: "Order #20384 shipped 🚀 today!",
+      tokens: [
+        {t:"Order"}, {t:" #"}, {t:"20", sub:true}, {t:"384", sub:true},
+        {t:" shipped"}, {t:" 🚀"},
+        {t:" today"}, {t:"!"}
+      ]
+    }
+  ];
+
+  var currentEx = 0;
+  var timers = [];
+
+  function clearTimers(){
+    for(var i=0;i<timers.length;i++) clearTimeout(timers[i]);
+    timers = [];
+  }
+
+  // word count = whitespace-delimited non-empty chunks of the raw text
+  function countWords(text){
+    var parts = text.trim().split(/\s+/);
+    if(parts.length === 1 && parts[0] === '') return 0;
+    return parts.length;
+  }
+
+  // Render the plain source as individual character spans so we can dim/fade them.
+  function renderSource(text){
+    sourceEl.innerHTML = '';
+    sourceEl.classList.remove('is-dim');
+    var frag = document.createDocumentFragment();
+    for(var i=0;i<text.length;i++){
+      var s = document.createElement('span');
+      s.className = 'ch';
+      // show spaces as visible width
+      s.textContent = text[i] === ' ' ? ' ' : text[i];
+      frag.appendChild(s);
+    }
+    sourceEl.appendChild(frag);
+  }
+
+  // Build a pill DOM node for one token.
+  function makePill(tok, colorIdx){
+    var pill = document.createElement('span');
+    pill.className = 'pill' + (tok.sub ? ' is-sub' : '');
+    var c = COLORS[colorIdx % COLORS.length];
+    pill.style.setProperty('--pc', c.bg);
+    pill.style.color = c.fg;
+
+    // render leading/internal spaces as a visible chip, keep other chars literal
+    var str = tok.t;
+    var i = 0;
+    // leading spaces -> space markers
+    while(i < str.length && str[i] === ' '){
+      var sp = document.createElement('span');
+      sp.className = 'spc';
+      pill.appendChild(sp);
+      i++;
+    }
+    var rest = str.slice(i);
+    if(rest.length){
+      pill.appendChild(document.createTextNode(rest));
+    }
+
+    // random fly-in offset for organic motion
+    var dx = (Math.random()*60 - 30).toFixed(0);
+    var dy = (Math.random()*-26 - 8).toFixed(0);
+    pill.style.setProperty('--dx', dx + 'px');
+    pill.style.setProperty('--dy', dy + 'px');
+    return pill;
+  }
+
+  function animateCount(el, target){
+    var start = 0;
+    var dur = reduce ? 0 : 520;
+    if(dur === 0){ el.textContent = target; return; }
+    var t0 = null;
+    function step(ts){
+      if(t0 === null) t0 = ts;
+      var p = Math.min(1, (ts - t0)/dur);
+      var eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(start + (target-start)*eased);
+      if(p < 1) requestAnimationFrame(step);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(step);
+  }
+
+  function run(exIndex){
+    clearTimers();
+    currentEx = exIndex;
+    var ex = EXAMPLES[exIndex];
+
+    buttons.forEach(function(b){
+      b.classList.toggle('is-active', parseInt(b.getAttribute('data-ex'),10) === exIndex);
+    });
+
+    // 1. show plain text
+    renderSource(ex.text);
+    pillsEl.innerHTML = '';
+    tokCountEl.textContent = '0';
+    var words = countWords(ex.text);
+
+    // pre-build pills (hidden) and figure out non-adjacent coloring
+    var colorIdx = 0;
+    var pills = ex.tokens.map(function(tok){
+      var p = makePill(tok, colorIdx);
+      colorIdx++;
+      var idx = document.createElement('span');
+      idx.className = 'idx';
+      p.appendChild(idx);
+      return p;
+    });
+
+    if(reduce){
+      // Non-animated fallback: dim text, show all pills at once, set counts.
+      sourceEl.classList.add('is-dim');
+      pills.forEach(function(p, i){
+        var idx = p.querySelector('.idx');
+        if(idx) idx.textContent = '#' + (i+1);
+        p.classList.add('is-in');
+        pillsEl.appendChild(p);
+      });
+      tokCountEl.textContent = ex.tokens.length;
+      wordCountEl.textContent = words;
+      reportH();
+      return;
+    }
+
+    // animated path
+    wordCountEl.textContent = words; // words are obvious from the visible text
+
+    // 2. brief beat, then dim the raw text (it is about to "shatter")
+    timers.push(setTimeout(function(){
+      sourceEl.classList.add('is-dim');
+    }, 420));
+
+    // 3. fly pills in one by one, ticking the token counter
+    var startDelay = 620;
+    var stagger = 130;
+    pills.forEach(function(p, i){
+      timers.push(setTimeout(function(){
+        pillsEl.appendChild(p);
+        // force reflow so the transition fires
+        void p.offsetWidth;
+        p.classList.add('is-in');
+        var idx = p.querySelector('.idx');
+        if(idx) idx.textContent = '#' + (i+1);
+        tokCountEl.textContent = (i+1);
+        reportH();
+      }, startDelay + i*stagger));
+    });
+
+    // 4. settle: animate the count number for emphasis at the end
+    timers.push(setTimeout(function(){
+      animateCount(tokCountEl, pills.length);
+      reportH();
+    }, startDelay + pills.length*stagger + 60));
+  }
+
+  buttons.forEach(function(b){
+    b.addEventListener('click', function(){
+      run(parseInt(b.getAttribute('data-ex'),10));
+    });
+  });
+  replayBtn.addEventListener('click', function(){ run(currentEx); });
+
+  // initial render (optionally deep-link an example with ?ex=N)
+  var startEx = 0;
+  try {
+    var m = (location.search || '').match(/[?&]ex=(\d+)/);
+    if(m){ var n = parseInt(m[1],10); if(n >= 0 && n < EXAMPLES.length) startEx = n; }
+  } catch(e){}
+  run(startEx);
+  reportH();
+})();
+</script>
+
+<!-- ============== Part 2 logic: meaning space ============== -->
+<script>
+(function(){
+  "use strict";
+  var root = document.getElementById('sec-embeddings');
+  if(!root) return;
+
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+
+  var stage   = root.querySelector('#emb-stage');
+  var canvas  = root.querySelector('#emb-canvas');
+  var labelsEl= root.querySelector('#emb-labels');
+  var legendEl= root.querySelector('#emb-legend');
+  var tipEl   = root.querySelector('#emb-tip');
+  var btnCluster = root.querySelector('#emb-cluster');
+  var btnScatter = root.querySelector('#emb-scatter');
+  var btnAnalogy = root.querySelector('#emb-analogy');
+  var ctx = canvas.getContext('2d');
+
+  // ----- color palette pulled from CSS vars (host-defined) -----
+  function cssVar(name, fallback){
+    var v = getComputedStyle(root).getPropertyValue(name);
+    return (v && v.trim()) ? v.trim() : fallback;
+  }
+  var C = {
+    ink:    cssVar('--ink','#1c1d1f'),
+    muted:  cssVar('--muted','#6b7280'),
+    line:   cssVar('--line','#e6dfce'),
+    accent: cssVar('--accent','#2f8cff'),
+    accent2:cssVar('--accent2','#0b5394'),
+    gold:   cssVar('--gold','#d97706'),
+    gap:    cssVar('--gap','#dc2626')
+  };
+
+  // ----- clusters: each word has a "true" meaning position (target) in [0..1] space -----
+  // hubX/hubY = cluster center; words jitter around it.
+  // Each 4-word group is laid out as a diamond (left / right / top / bottom)
+  // around its hub so the pills never overlap. The left->right offset inside
+  // Royalty (king->queen) is kept identical to the left->right offset inside
+  // the Gender group (man->woman), so the classic analogy
+  // king - man + woman lands exactly on queen.
+  var clusters = [
+    { name:'Royalty', color:C.gold,    hub:[0.24,0.30],
+      words:[ ['king',[-0.085,0.0]], ['queen',[0.085,0.0]], ['prince',[0.0,-0.11]], ['princess',[0.0,0.11]] ] },
+    { name:'Animals', color:C.accent2, hub:[0.76,0.30],
+      words:[ ['dog',[-0.085,0.0]], ['cat',[0.085,0.0]], ['puppy',[0.0,-0.11]], ['kitten',[0.0,0.11]] ] },
+    { name:'Finance', color:C.accent,  hub:[0.27,0.74],
+      words:[ ['money',[-0.095,0.0]], ['bank',[0.085,0.0]], ['invest',[0.0,-0.11]], ['savings',[0.0,0.11]] ] },
+    { name:'Gender axis', color:C.gap, hub:[0.74,0.74],
+      words:[ ['man',[-0.085,0.0]], ['woman',[0.085,0.0]] ] }
+  ];
+
+  // Build node list
+  var nodes = [];
+  clusters.forEach(function(cl, ci){
+    cl.words.forEach(function(w){
+      nodes.push({
+        word: w[0],
+        cluster: ci,
+        color: cl.color,
+        // semantic target in normalized space
+        tx: cl.hub[0] + w[1][0],
+        ty: cl.hub[1] + w[1][1],
+        // current animated normalized position
+        cx: Math.random(), cy: Math.random(),
+        // render position (px) filled each frame
+        px: 0, py: 0,
+        el: null
+      });
+    });
+  });
+
+  function byWord(w){ for(var i=0;i<nodes.length;i++){ if(nodes[i].word===w) return nodes[i]; } return null; }
+
+  // ----- DOM labels -----
+  nodes.forEach(function(n){
+    var el = document.createElement('div');
+    el.className = 'emb-word';
+    el.style.setProperty('--clr', n.color);
+    el.innerHTML = '<span class="emb-dot"></span>' + n.word;
+    el.setAttribute('data-word', n.word);
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', 'Word ' + n.word + ': show nearest neighbors');
+    labelsEl.appendChild(el);
+    n.el = el;
+
+    el.addEventListener('mouseenter', function(){ focusWord(n); });
+    el.addEventListener('mouseleave', function(){ if(!pinned) clearFocus(); });
+    el.addEventListener('focus', function(){ focusWord(n); });
+    el.addEventListener('blur', function(){ if(!pinned) clearFocus(); });
+    el.addEventListener('click', function(){
+      if(pinned === n){ pinned = null; clearFocus(); }
+      else { pinned = n; focusWord(n); }
+    });
+    el.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        if(pinned === n){ pinned = null; clearFocus(); }
+        else { pinned = n; focusWord(n); }
+      }
+    });
+  });
+
+  // legend
+  clusters.forEach(function(cl){
+    var s = document.createElement('span');
+    s.className = 'emb-leg';
+    s.innerHTML = '<i style="background:'+cl.color+'"></i>'+cl.name;
+    legendEl.appendChild(s);
+  });
+
+  // ----- sizing / HiDPI -----
+  var W=0, H=0, DPR=1, PAD=46;
+  function resize(){
+    var r = stage.getBoundingClientRect();
+    W = Math.max(2, r.width); H = Math.max(2, r.height);
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(W*DPR); canvas.height = Math.round(H*DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  // map normalized [0..1] -> pixel inside padded box
+  function nx(v){ return PAD + v*(W-2*PAD); }
+  function ny(v){ return PAD + v*(H-2*PAD); }
+
+  // ----- state -----
+  var mode = 'scattered';     // 'scattered' | 'clustered' | 'analogy'
+  var focused = null;         // node being highlighted
+  var pinned = null;          // clicked node
+  var analogy = null;         // analogy animation state
+  var morphT = 0;             // 0..1 transition progress for cluster/scatter
+  var morphActive = false;
+  var morphFrom = [];         // snapshot of cx,cy at morph start
+  var morphTo = [];           // target cx,cy
+
+  function snapshotTargets(toClustered){
+    morphFrom = nodes.map(function(n){ return [n.cx, n.cy]; });
+    morphTo = nodes.map(function(n){
+      if(toClustered) return [n.tx, n.ty];
+      // scatter: random but kept inside frame
+      return [0.08 + Math.random()*0.84, 0.08 + Math.random()*0.84];
+    });
+    morphT = 0; morphActive = true;
+  }
+
+  function doCluster(){
+    if(mode==='analogy') endAnalogy();
+    mode = 'clustered';
+    snapshotTargets(true);
+    setTip('Sorted. Words with similar meaning sit together. Hover one to see its neighbors.');
+    if(reduceMotion){ morphT=1; morphActive=false; nodes.forEach(function(n){ n.cx=n.tx; n.cy=n.ty; }); }
+  }
+  function doScatter(){
+    if(mode==='analogy') endAnalogy();
+    mode = 'scattered';
+    pinned=null; clearFocus();
+    snapshotTargets(false);
+    setTip('Scrambled. Position is meaningless now. Press Cluster to let meaning pull them together.');
+    if(reduceMotion){ morphT=1; morphActive=false; nodes.forEach(function(n,i){ n.cx=morphTo[i][0]; n.cy=morphTo[i][1]; }); }
+  }
+
+  // ----- nearest neighbors (in semantic target space) -----
+  function neighbors(n, k){
+    var arr = nodes.filter(function(m){ return m!==n; }).map(function(m){
+      var dx=m.tx-n.tx, dy=m.ty-n.ty;
+      return { node:m, d:Math.sqrt(dx*dx+dy*dy) };
+    });
+    arr.sort(function(a,b){ return a.d-b.d; });
+    return arr.slice(0,k);
+  }
+
+  function focusWord(n){
+    focused = n;
+    nodes.forEach(function(m){
+      m.el.classList.remove('is-active','is-dim');
+    });
+    n.el.classList.add('is-active');
+    var nn = neighbors(n, 3);
+    var keep = {}; keep[n.word]=1; nn.forEach(function(x){ keep[x.node.word]=1; });
+    nodes.forEach(function(m){ if(!keep[m.word]) m.el.classList.add('is-dim'); });
+    nn.forEach(function(x){ x.node.el.classList.add('is-active'); });
+    var names = nn.map(function(x){ return x.node.word; }).join(', ');
+    setTip('<b>'+n.word+'</b> sits closest to <span class="emb-near">'+names+'</span>. Closer in space means closer in meaning.');
+  }
+  function clearFocus(){
+    focused = null;
+    nodes.forEach(function(m){ m.el.classList.remove('is-active','is-dim'); });
+    if(mode==='clustered') setTip('Sorted. Hover any word to see its three nearest neighbors.');
+  }
+
+  function setTip(html){ tipEl.innerHTML = html; }
+
+  // ----- analogy: king - man + woman = queen -----
+  function startAnalogy(){
+    if(mode!=='clustered') doCluster();
+    mode='analogy'; pinned=null; clearFocus();
+    var king=byWord('king'), man=byWord('man'), woman=byWord('woman'), queen=byWord('queen');
+    // dim everything except the four players
+    nodes.forEach(function(m){
+      if(m===king||m===man||m===woman||m===queen) m.el.classList.add('is-active');
+      else m.el.classList.add('is-dim');
+    });
+    analogy = { king:king, man:man, woman:woman, queen:queen, t:0, stage:0 };
+    setTip('Take the point for <b>king</b>. Subtract the direction of <b>man</b>, add the direction of <b>woman</b>...');
+    if(reduceMotion){ analogy.t=1; analogy.stage=3; setTip('king minus man plus woman lands right on top of <b>queen</b>. The math of meaning works.'); }
+  }
+  function endAnalogy(){
+    analogy=null;
+    nodes.forEach(function(m){ m.el.classList.remove('is-active','is-dim'); });
+  }
+
+  // ----- main loop -----
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function easeInOut(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // advance morph
+    if(morphActive){
+      morphT += reduceMotion ? 1 : 0.022;
+      if(morphT>=1){ morphT=1; morphActive=false; }
+      var e = easeInOut(morphT);
+      nodes.forEach(function(n,i){
+        n.cx = lerp(morphFrom[i][0], morphTo[i][0], e);
+        n.cy = lerp(morphFrom[i][1], morphTo[i][1], e);
+      });
+    }
+
+    // compute pixel positions
+    nodes.forEach(function(n){ n.px = nx(n.cx); n.py = ny(n.cy); });
+
+    // soft cluster halos when clustered
+    if(mode==='clustered' && !morphActive){
+      clusters.forEach(function(cl, ci){
+        var members = nodes.filter(function(n){ return n.cluster===ci; });
+        if(members.length<2) return;
+        var minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+        members.forEach(function(n){ minx=Math.min(minx,n.px); miny=Math.min(miny,n.py); maxx=Math.max(maxx,n.px); maxy=Math.max(maxy,n.py); });
+        var cx=(minx+maxx)/2, cy=(miny+maxy)/2;
+        var rad=Math.max((maxx-minx),(maxy-miny))/2 + 46;
+        var g = ctx.createRadialGradient(cx,cy,8,cx,cy,rad);
+        g.addColorStop(0, hexA(cl.color,0.16));
+        g.addColorStop(1, hexA(cl.color,0));
+        ctx.fillStyle=g;
+        ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2); ctx.fill();
+      });
+    }
+
+    // neighbor connection lines on focus
+    if(focused && !morphActive && mode==='clustered'){
+      var nn = neighbors(focused,3);
+      nn.forEach(function(x){
+        var m=x.node;
+        ctx.strokeStyle = hexA(focused.color, 0.75);
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([5,5]);
+        ctx.beginPath(); ctx.moveTo(focused.px,focused.py); ctx.lineTo(m.px,m.py); ctx.stroke();
+        ctx.setLineDash([]);
+        // distance label at midpoint
+        var mx=(focused.px+m.px)/2, my=(focused.py+m.py)/2;
+        var dist = Math.round(x.d*100)/100;
+        ctx.font='600 11px -apple-system,Segoe UI,Roboto,sans-serif';
+        ctx.fillStyle=hexA(C.ink,0.88);
+        ctx.textAlign='center';
+        ctx.fillText(dist.toFixed(2), mx, my-4);
+      });
+    }
+
+    // dots for every node (under labels)
+    nodes.forEach(function(n){
+      // white halo so the point reads on cream and inside cluster tints
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,255,255,.95)';
+      ctx.arc(n.px, n.py, 4.4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = hexA(n.color, 0.95);
+      ctx.arc(n.px, n.py, 3.0, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    // analogy drawing
+    if(mode==='analogy' && analogy){ drawAnalogy(); }
+
+    // position the DOM labels
+    nodes.forEach(function(n){
+      n.el.style.left = n.px + 'px';
+      n.el.style.top  = n.py + 'px';
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  function drawAnalogy(){
+    var a=analogy;
+    if(!reduceMotion){ a.t += 0.012; }
+    // stages: 0 build king-man vector, 1 add woman vector, 2 show result point, 3 land on queen
+    var king=a.king, man=a.man, woman=a.woman, queen=a.queen;
+    // direction vectors in pixel space
+    var vKM = { x: king.px - man.px, y: king.py - man.py }; // king - man
+    var vW  = { x: woman.px, y: woman.py };
+    // result point = king + (woman - man)  == king - man + woman
+    var resX = king.px + (woman.px - man.px);
+    var resY = king.py + (woman.py - man.py);
+
+    var p = Math.min(1, a.t);
+
+    // step1: arrow from man -> king (the "remove man, this is the male->royalty offset")
+    drawArrow(man.px, man.py, lerp(man.px,king.px,Math.min(1,p*2)), lerp(man.py,king.py,Math.min(1,p*2)), C.gap, 'king - man');
+
+    if(p>0.45){
+      var q=(p-0.45)/0.55;
+      // step2: from king, apply (woman - man) offset to reach result
+      drawArrow(king.px, king.py,
+        lerp(king.px, resX, Math.min(1,q*1.4)),
+        lerp(king.py, resY, Math.min(1,q*1.4)),
+        C.accent2, '+ woman');
+    }
+
+    if(p>0.92){
+      // result marker
+      ctx.beginPath();
+      ctx.fillStyle = hexA(C.gold, 0.85);
+      ctx.arc(resX, resY, 6, 0, Math.PI*2); ctx.fill();
+      ctx.lineWidth=2; ctx.strokeStyle=C.gold;
+      ctx.beginPath(); ctx.arc(resX,resY,12,0,Math.PI*2); ctx.stroke();
+
+      // ring around queen to show match
+      var pulse = 10 + Math.sin(performance.now()/220)*4;
+      ctx.lineWidth=2; ctx.strokeStyle=hexA(C.gold,0.9);
+      ctx.beginPath(); ctx.arc(queen.px, queen.py, pulse+12, 0, Math.PI*2); ctx.stroke();
+
+      if(a.stage<3){ a.stage=3; setTip('king minus man plus woman lands right on top of <b>queen</b>. The same offset that turns man into woman turns king into queen.'); }
+    } else if(p>0.45 && a.stage<2){ a.stage=2; setTip('Now add the <b>woman</b> direction. The result drifts toward the female side of royalty...'); }
+  }
+
+  function drawArrow(x1,y1,x2,y2,color,label){
+    ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2.4;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    var ang=Math.atan2(y2-y1,x2-x1), len=10;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-len*Math.cos(ang-0.4), y2-len*Math.sin(ang-0.4));
+    ctx.lineTo(x2-len*Math.cos(ang+0.4), y2-len*Math.sin(ang+0.4));
+    ctx.closePath(); ctx.fill();
+    if(label){
+      var mx=(x1+x2)/2, my=(y1+y2)/2;
+      ctx.font='600 12px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillStyle=color; ctx.textAlign='center';
+      ctx.fillText(label, mx, my-8);
+    }
+  }
+
+  // hex (#rrggbb) + alpha -> rgba()
+  function hexA(hex, a){
+    hex = (hex||'').replace('#','');
+    if(hex.length===3){ hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2]; }
+    var r=parseInt(hex.substr(0,2),16)||47,
+        g=parseInt(hex.substr(2,2),16)||140,
+        b=parseInt(hex.substr(4,2),16)||255;
+    return 'rgba('+r+','+g+','+b+','+a+')';
+  }
+
+  // ----- wire controls -----
+  btnCluster.addEventListener('click', doCluster);
+  btnScatter.addEventListener('click', doScatter);
+  btnAnalogy.addEventListener('click', function(){
+    if(mode==='analogy'){ doCluster(); }
+    else { startAnalogy(); }
+  });
+
+  // ----- boot -----
+  resize();
+  window.addEventListener('resize', resize);
+  // start scattered, then auto-cluster shortly so the sort is the first thing seen
+  nodes.forEach(function(n){ n.cx=0.08+Math.random()*0.84; n.cy=0.08+Math.random()*0.84; });
+  requestAnimationFrame(draw);
+  if(!reduceMotion){
+    setTimeout(doCluster, 700);
+  } else {
+    doCluster();
+  }
+  // tell the embedding host how tall we ended up (fixed-aspect stage, stable height)
+  if(window.reportDiagramHeight){
+    window.reportDiagramHeight();
+    setTimeout(window.reportDiagramHeight, 120);
+  }
+})();
+</script>
+</body>
+</html>

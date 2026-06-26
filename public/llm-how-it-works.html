@@ -1,0 +1,2727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How LLMs Work, Visually</title>
+<style>
+  :root{
+    --bg:#f7f3ea; --panel:#ffffff; --panel2:#efe9da; --ink:#1c1d1f; --muted:#6b7280;
+    --line:#e6dfce; --accent:#2f8cff; --accent2:#0b5394; --gold:#d97706; --gap:#dc2626;
+    --sans:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"DM Serif Display",Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto;padding:40px 22px 120px}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:30px;flex-wrap:wrap}
+  .kicker{color:var(--accent);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:11.5px}
+  h1{font-family:var(--serif);font-weight:400;font-size:38px;line-height:1.1;margin:8px 0 8px;letter-spacing:-.01em}
+  h1 .dot{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--accent);vertical-align:top;margin-left:3px;margin-top:6px}
+  .intro{color:var(--muted);font-size:15px;max-width:660px;margin:0}
+  .back{white-space:nowrap;font-size:13.5px;color:var(--accent);font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:9px;padding:9px 14px;background:var(--panel)}
+  .back:hover{border-color:var(--accent)}
+  .group-label{font-family:var(--serif);color:var(--accent2);font-size:17px;margin:42px 0 6px;padding-top:20px;border-top:1px solid var(--line)}
+  .block{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin:16px 0 8px;box-shadow:0 1px 2px rgba(28,29,31,.04)}
+  .block-head h2{font-size:20px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em}
+  .block-head .cap{color:var(--muted);font-size:14.5px;margin:0 0 16px}
+  .viz-host{margin:4px 0 6px}
+  .viz-host .viz{width:100%}
+  .block-foot{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .watch{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;color:#fff;text-decoration:none;background:var(--accent);border:1px solid var(--accent);border-radius:9px;padding:8px 13px;font-weight:600}
+  .watch:hover{background:var(--accent2);border-color:var(--accent2)}
+  .drill{font-size:13px;color:var(--accent2);text-decoration:none;margin-left:auto;font-weight:600}
+  .drill:hover{text-decoration:underline}
+  .foot{color:var(--muted);font-size:13px;margin-top:44px;border-top:1px solid var(--line);padding-top:16px;text-align:center}
+  .foot a{color:var(--accent);font-weight:600;text-decoration:none}
+  @media(max-width:560px){ .drill{margin-left:0} h1{font-size:30px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <div class="kicker">Briefly &middot; learn by watching</div>
+      <h1>How a Large Language Model Works<span class="dot"></span></h1>
+      <p class="intro">Five animated pieces, from your words going in to the model learning in the first place. Play with each one: drag the sliders, click the words, run the steps.</p>
+    </div>
+    <a class="back" href="llm-spaced-repetition.html">&larr; Study app</a>
+  </div>
+  <div class="group-label">How it reads your words</div>
+  <section class="block">
+    <div class="block-head"><h2>1. Tokenization</h2><p class="cap">Your text is split into tokens (chunks), not whole words. Watch a sentence break apart.</p></div>
+    <div class="viz-host">
+      <style>
+  #sec-tokens{
+    max-width:980px; margin:0 auto;
+    display:flex; flex-direction:column; gap:22px;
+  }
+  #sec-tokens *{ box-sizing:border-box; }
+
+  #sec-tokens .viz-head{ display:flex; flex-direction:column; gap:6px; }
+  #sec-tokens h1{
+    font-size:26px; font-weight:650; margin:0; letter-spacing:-0.01em;
+  }
+  #sec-tokens .viz-caption{
+    font-size:14px; color:var(--muted); margin:0; line-height:1.5;
+  }
+
+  #sec-tokens .viz-controls{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+  }
+  #sec-tokens .viz-btn{
+    appearance:none; cursor:pointer;
+    background:var(--panel); color:var(--ink);
+    border:1px solid var(--line); border-radius:999px;
+    padding:9px 16px; font-size:13px; font-weight:520;
+    font-family:inherit; line-height:1.2;
+    transition:border-color .18s ease, background .18s ease, color .18s ease, transform .12s ease;
+  }
+  #sec-tokens .viz-btn:hover{ border-color:var(--accent); background:var(--panel2); }
+  #sec-tokens .viz-btn:active{ transform:translateY(1px); }
+  #sec-tokens .viz-btn.is-active{
+    border-color:var(--accent); color:var(--accent2); background:var(--panel);
+    box-shadow:inset 0 0 0 1px var(--accent);
+  }
+  #sec-tokens .viz-btn-replay{
+    margin-left:auto; border-color:var(--line); color:var(--accent2);
+  }
+  #sec-tokens .viz-btn-replay:hover{ background:var(--panel2); border-color:var(--accent2); }
+
+  /* Stage */
+  #sec-tokens .viz-stage{
+    background:var(--panel); border:1px solid var(--line);
+    border-radius:18px; padding:24px 28px 26px;
+    display:flex; flex-direction:column; gap:8px;
+    min-height:260px;
+  }
+  #sec-tokens .viz-rowlabel{
+    font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted);
+  }
+  #sec-tokens .viz-rowlabel + .viz-source{ margin-bottom:14px; }
+  #sec-tokens .viz-rowlabel + .viz-pills{ margin-top:6px; }
+
+  /* Plain-text source line */
+  #sec-tokens .viz-source{
+    font-size:23px; line-height:1.5; letter-spacing:0.01em;
+    min-height:34px;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    color:var(--ink);
+  }
+  #sec-tokens .viz-source .ch{
+    display:inline-block; white-space:pre;
+    transition:opacity .35s ease, transform .45s ease, color .35s ease;
+    will-change:opacity,transform;
+  }
+  #sec-tokens .viz-source.is-dim .ch{ opacity:.30; }
+
+  #sec-tokens .viz-divider{
+    height:1px; background:var(--line); margin:10px 0 4px;
+  }
+
+  /* Token pill row. Row gap is generous so adjacent pills (and the
+     sub-word rings) never visually merge; column gap leaves room for rings. */
+  #sec-tokens .viz-pills{
+    display:flex; flex-wrap:wrap; column-gap:12px; row-gap:24px; align-items:center;
+    min-height:46px;
+  }
+  #sec-tokens .pill{
+    --pc:var(--accent);
+    position:relative;
+    display:inline-flex; align-items:center;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    font-size:20px; font-weight:560; line-height:1;
+    padding:11px 13px; border-radius:11px; white-space:pre;
+    color:var(--ink); /* per-pill JS overrides to ink or white per fill for contrast */
+    background:var(--pc);
+    border:1px solid rgba(28,29,31,.12);
+    box-shadow:0 1px 2px rgba(28,29,31,.10);
+    opacity:0; transform:translate(var(--dx,0px),var(--dy,-14px)) scale(.82);
+    transition:opacity .42s cubic-bezier(.2,.7,.25,1),
+               transform .52s cubic-bezier(.2,.7,.25,1);
+    will-change:opacity,transform;
+  }
+  #sec-tokens .pill.is-in{ opacity:1; transform:translate(0,0) scale(1); }
+  /* space-character marker shown inside a pill so leading spaces are visible */
+  #sec-tokens .pill .spc{
+    display:inline-block; width:.62em; height:1.05em;
+    margin-right:2px; border-radius:3px;
+    background:rgba(255,255,255,.30);
+    position:relative; top:.06em;
+  }
+  #sec-tokens .pill .spc::after{
+    content:"\2423"; position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.9em; color:currentColor; opacity:.85;
+  }
+  /* faint index label under each token */
+  #sec-tokens .pill .idx{
+    position:absolute; left:0; right:0; bottom:-18px;
+    text-align:center; font-size:10.5px; color:var(--muted);
+    font-variant-numeric:tabular-nums;
+    opacity:0; transition:opacity .4s ease; pointer-events:none;
+  }
+  #sec-tokens .pill.is-in .idx{ opacity:1; }
+
+  /* the subword-split highlight: chips that came from one long word get a ring.
+     White inner gap keeps the red ring visible even on a red-filled token. */
+  #sec-tokens .pill.is-sub{
+    box-shadow:0 1px 2px rgba(28,29,31,.10),
+               0 0 0 2px #ffffff,
+               0 0 0 4px var(--gap);
+  }
+
+  /* Counters */
+  #sec-tokens .viz-counters{
+    display:flex; flex-wrap:wrap; gap:14px; margin-top:4px;
+  }
+  #sec-tokens .counter{
+    background:var(--panel2); border:1px solid var(--line);
+    border-radius:12px; padding:12px 18px;
+    display:flex; flex-direction:column; gap:3px; min-width:118px;
+  }
+  #sec-tokens .counter .num{
+    font-size:26px; font-weight:680; line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  #sec-tokens .counter .lbl{ font-size:11.5px; color:var(--muted); letter-spacing:.02em; }
+  #sec-tokens .counter.tokens .num{ color:var(--accent); }
+  #sec-tokens .counter.words .num{ color:var(--gold); }
+  #sec-tokens .counter.note{ justify-content:center; background:transparent; border-color:transparent; }
+  #sec-tokens .counter.note .lbl{ font-size:12.5px; color:var(--muted); max-width:230px; line-height:1.45; }
+  #sec-tokens .counter.note b{ color:var(--gap); font-weight:600; }
+
+  #sec-tokens .viz-legend{
+    display:flex; flex-wrap:wrap; gap:16px; font-size:12px; color:var(--muted);
+  }
+  #sec-tokens .viz-legend span{ display:inline-flex; align-items:center; gap:7px; }
+  #sec-tokens .swatch{ width:13px; height:13px; border-radius:4px; display:inline-block; }
+  #sec-tokens .swatch.sub{ box-shadow:inset 0 0 0 2px var(--gap); background:var(--panel); }
+  #sec-tokens .swatch.spc{ background:var(--accent); position:relative; }
+  #sec-tokens .swatch.spc::after{ content:"\2423"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff; }
+
+  @media (max-width:560px){
+    #sec-tokens .viz-source{ font-size:18px; }
+    #sec-tokens .pill{ font-size:16px; padding:9px 10px; }
+    #sec-tokens .viz-btn-replay{ margin-left:0; }
+  }
+
+  /* Reduced-motion fallback: pills appear instantly, no flying-apart */
+  @media (prefers-reduced-motion:reduce){
+    #sec-tokens .viz-source .ch,
+    #sec-tokens .pill,
+    #sec-tokens .pill .idx{ transition:none !important; }
+    #sec-tokens .pill{ opacity:1; transform:none; }
+    #sec-tokens .pill .idx{ opacity:.85; }
+  }
+</style>
+
+<section class="viz" id="sec-tokens">
+  <div class="viz-head">
+    <h1>Tokenization, visualized</h1>
+    <p class="viz-caption">Watch a sentence fly apart into the pieces a model actually reads. The boundaries are not where you would put them.</p>
+  </div>
+
+  <div class="viz-controls">
+    <button class="viz-btn" data-ex="0" type="button">Normal sentence</button>
+    <button class="viz-btn" data-ex="1" type="button">Rare long word</button>
+    <button class="viz-btn" data-ex="2" type="button">Number + emoji</button>
+    <button class="viz-btn viz-btn-replay" data-replay type="button">Replay</button>
+  </div>
+
+  <div class="viz-stage">
+    <span class="viz-rowlabel">What you wrote</span>
+    <div class="viz-source" id="tok-source" aria-hidden="true"></div>
+    <div class="viz-divider"></div>
+    <span class="viz-rowlabel">What the model reads (tokens)</span>
+    <div class="viz-pills" id="tok-pills" aria-live="polite"></div>
+  </div>
+
+  <div class="viz-counters">
+    <div class="counter tokens"><span class="num" id="tok-count">0</span><span class="lbl">TOKENS</span></div>
+    <div class="counter words"><span class="num" id="word-count">0</span><span class="lbl">WORDS</span></div>
+    <div class="counter note"><span class="lbl">Tokens are <b>not</b> words. Rare words break into sub-word pieces, and the leading space stays attached inside the token.</span></div>
+  </div>
+
+  <div class="viz-legend">
+    <span><span class="swatch sub"></span> piece of one longer word</span>
+    <span><span class="swatch spc"></span> space lives inside the token</span>
+  </div>
+</section>
+
+<script>
+(function(){
+  var root = document.getElementById('sec-tokens');
+  if(!root) return;
+
+  var sourceEl = root.querySelector('#tok-source');
+  var pillsEl  = root.querySelector('#tok-pills');
+  var tokCountEl = root.querySelector('#tok-count');
+  var wordCountEl = root.querySelector('#word-count');
+  var buttons = Array.prototype.slice.call(root.querySelectorAll('.viz-btn[data-ex]'));
+  var replayBtn = root.querySelector('[data-replay]');
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Token fill colors. Two map keys: bg (fill) + fg (legible text on that fill).
+  // Adjacent tokens always differ. Blue + amber take dark ink; deep-blue + red take white.
+  var COLORS = [
+    {bg:'var(--accent)',  fg:'var(--ink)'},
+    {bg:'var(--accent2)', fg:'#ffffff'},
+    {bg:'var(--gold)',    fg:'var(--ink)'},
+    {bg:'var(--gap)',     fg:'#ffffff'}
+  ];
+
+  // Each example: full text + an ordered list of token strings whose
+  // concatenation EXACTLY reconstructs the text. sub:true marks pieces that
+  // came from breaking one longer word into multiple sub-word tokens.
+  // A literal leading space inside a token string is the space the tokenizer
+  // attaches to the front of a word.
+  var EXAMPLES = [
+    {
+      // Everyday sentence. "Tokenization" is rare enough to split; the rest
+      // are common whole-word tokens that carry their leading space.
+      text: "Tokenization breaks text into pieces.",
+      tokens: [
+        {t:"Token", sub:true}, {t:"ization", sub:true},
+        {t:" breaks"}, {t:" text"}, {t:" into"}, {t:" pieces"}, {t:"."}
+      ]
+    },
+    {
+      // One very long rare word that shatters into many sub-word tokens,
+      // proving token count far exceeds word count (1 word -> 7 tokens).
+      text: "Antidisestablishmentarianism is uncommon.",
+      tokens: [
+        {t:"Ant", sub:true}, {t:"id", sub:true}, {t:"is", sub:true},
+        {t:"establishment", sub:true}, {t:"arian", sub:true}, {t:"ism", sub:true},
+        {t:" is"}, {t:" uncommon"}, {t:"."}
+      ]
+    },
+    {
+      // Numbers split into digit chunks and an emoji is its own single token
+      // (not a sub-word piece). Punctuation and "#" sit on their own too.
+      text: "Order #20384 shipped 🚀 today!",
+      tokens: [
+        {t:"Order"}, {t:" #"}, {t:"20", sub:true}, {t:"384", sub:true},
+        {t:" shipped"}, {t:" 🚀"},
+        {t:" today"}, {t:"!"}
+      ]
+    }
+  ];
+
+  var currentEx = 0;
+  var timers = [];
+
+  function clearTimers(){
+    for(var i=0;i<timers.length;i++) clearTimeout(timers[i]);
+    timers = [];
+  }
+
+  // word count = whitespace-delimited non-empty chunks of the raw text
+  function countWords(text){
+    var parts = text.trim().split(/\s+/);
+    if(parts.length === 1 && parts[0] === '') return 0;
+    return parts.length;
+  }
+
+  // Render the plain source as individual character spans so we can dim/fade them.
+  function renderSource(text){
+    sourceEl.innerHTML = '';
+    sourceEl.classList.remove('is-dim');
+    var frag = document.createDocumentFragment();
+    for(var i=0;i<text.length;i++){
+      var s = document.createElement('span');
+      s.className = 'ch';
+      // show spaces as visible width
+      s.textContent = text[i] === ' ' ? ' ' : text[i];
+      frag.appendChild(s);
+    }
+    sourceEl.appendChild(frag);
+  }
+
+  // Build a pill DOM node for one token.
+  function makePill(tok, colorIdx){
+    var pill = document.createElement('span');
+    pill.className = 'pill' + (tok.sub ? ' is-sub' : '');
+    var c = COLORS[colorIdx % COLORS.length];
+    pill.style.setProperty('--pc', c.bg);
+    pill.style.color = c.fg;
+
+    // render leading/internal spaces as a visible chip, keep other chars literal
+    var str = tok.t;
+    var i = 0;
+    // leading spaces -> space markers
+    while(i < str.length && str[i] === ' '){
+      var sp = document.createElement('span');
+      sp.className = 'spc';
+      pill.appendChild(sp);
+      i++;
+    }
+    var rest = str.slice(i);
+    if(rest.length){
+      pill.appendChild(document.createTextNode(rest));
+    }
+
+    // random fly-in offset for organic motion
+    var dx = (Math.random()*60 - 30).toFixed(0);
+    var dy = (Math.random()*-26 - 8).toFixed(0);
+    pill.style.setProperty('--dx', dx + 'px');
+    pill.style.setProperty('--dy', dy + 'px');
+    return pill;
+  }
+
+  function animateCount(el, target){
+    var start = 0;
+    var dur = reduce ? 0 : 520;
+    if(dur === 0){ el.textContent = target; return; }
+    var t0 = null;
+    function step(ts){
+      if(t0 === null) t0 = ts;
+      var p = Math.min(1, (ts - t0)/dur);
+      var eased = 1 - Math.pow(1-p, 3);
+      el.textContent = Math.round(start + (target-start)*eased);
+      if(p < 1) requestAnimationFrame(step);
+      else el.textContent = target;
+    }
+    requestAnimationFrame(step);
+  }
+
+  function run(exIndex){
+    clearTimers();
+    currentEx = exIndex;
+    var ex = EXAMPLES[exIndex];
+
+    buttons.forEach(function(b){
+      b.classList.toggle('is-active', parseInt(b.getAttribute('data-ex'),10) === exIndex);
+    });
+
+    // 1. show plain text
+    renderSource(ex.text);
+    pillsEl.innerHTML = '';
+    tokCountEl.textContent = '0';
+    var words = countWords(ex.text);
+
+    // pre-build pills (hidden) and figure out non-adjacent coloring
+    var colorIdx = 0;
+    var pills = ex.tokens.map(function(tok){
+      var p = makePill(tok, colorIdx);
+      colorIdx++;
+      var idx = document.createElement('span');
+      idx.className = 'idx';
+      p.appendChild(idx);
+      return p;
+    });
+
+    if(reduce){
+      // Non-animated fallback: dim text, show all pills at once, set counts.
+      sourceEl.classList.add('is-dim');
+      pills.forEach(function(p, i){
+        var idx = p.querySelector('.idx');
+        if(idx) idx.textContent = '#' + (i+1);
+        p.classList.add('is-in');
+        pillsEl.appendChild(p);
+      });
+      tokCountEl.textContent = ex.tokens.length;
+      wordCountEl.textContent = words;
+      return;
+    }
+
+    // animated path
+    wordCountEl.textContent = words; // words are obvious from the visible text
+
+    // 2. brief beat, then dim the raw text (it is about to "shatter")
+    timers.push(setTimeout(function(){
+      sourceEl.classList.add('is-dim');
+    }, 420));
+
+    // 3. fly pills in one by one, ticking the token counter
+    var startDelay = 620;
+    var stagger = 130;
+    pills.forEach(function(p, i){
+      timers.push(setTimeout(function(){
+        pillsEl.appendChild(p);
+        // force reflow so the transition fires
+        void p.offsetWidth;
+        p.classList.add('is-in');
+        var idx = p.querySelector('.idx');
+        if(idx) idx.textContent = '#' + (i+1);
+        tokCountEl.textContent = (i+1);
+      }, startDelay + i*stagger));
+    });
+
+    // 4. settle: animate the count number for emphasis at the end
+    timers.push(setTimeout(function(){
+      animateCount(tokCountEl, pills.length);
+    }, startDelay + pills.length*stagger + 60));
+  }
+
+  buttons.forEach(function(b){
+    b.addEventListener('click', function(){
+      run(parseInt(b.getAttribute('data-ex'),10));
+    });
+  });
+  replayBtn.addEventListener('click', function(){ run(currentEx); });
+
+  // initial render (optionally deep-link an example with ?ex=N)
+  var startEx = 0;
+  try {
+    var m = (location.search || '').match(/[?&]ex=(\d+)/);
+    if(m){ var n = parseInt(m[1],10); if(n >= 0 && n < EXAMPLES.length) startEx = n; }
+  } catch(e){}
+  run(startEx);
+})();
+</script>
+    </div>
+    <div class="block-foot">
+      <a class="watch" href="https://www.youtube.com/watch?v=wgfSDrqYMJ4" target="_blank" rel="noopener">&#9654; Watch: What are Word Embeddings? (IBM Technology)</a>
+      <a class="drill" href="llm-spaced-repetition.html" target="_blank" rel="noopener">Drill these cards in the study app &rarr;</a>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head"><h2>2. Embeddings</h2><p class="cap">Each token becomes a point in "meaning space", where similar ideas sit close together.</p></div>
+    <div class="viz-host">
+      <style>
+  #sec-embeddings{
+    display:block; width:100%; max-width:960px; margin:0 auto;
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;
+  }
+  #sec-embeddings *{box-sizing:border-box;}
+  #sec-embeddings .emb-head{margin:0 0 14px;}
+  #sec-embeddings .emb-kicker{
+    font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent2); font-weight:700; margin:0 0 6px;
+  }
+  #sec-embeddings h2{
+    font-size:clamp(22px,3.4vw,30px); line-height:1.15; margin:0 0 8px; font-weight:800;
+    letter-spacing:-.01em;
+  }
+  #sec-embeddings .emb-sub{color:var(--muted); font-size:15px; margin:0; max-width:62ch;}
+
+  #sec-embeddings .emb-shell{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    overflow:hidden; box-shadow:0 10px 30px rgba(28,29,31,.08);
+  }
+  #sec-embeddings .emb-stage{
+    position:relative; width:100%; aspect-ratio:16/10; background:
+      radial-gradient(120% 90% at 30% 18%, rgba(47,140,255,.06), transparent 60%),
+      radial-gradient(110% 90% at 78% 82%, rgba(217,119,6,.05), transparent 60%),
+      var(--panel2);
+    min-height:340px;
+  }
+  #sec-embeddings canvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
+  #sec-embeddings .emb-labels{position:absolute; inset:0; pointer-events:none;}
+  #sec-embeddings .emb-word{
+    position:absolute; transform:translate(-50%,-50%);
+    pointer-events:auto; cursor:pointer; user-select:none;
+    padding:5px 11px; border-radius:999px; font-size:13.5px; font-weight:650;
+    color:var(--ink); white-space:nowrap;
+    background:rgba(255,255,255,.9); border:1px solid var(--line);
+    box-shadow:0 1px 3px rgba(28,29,31,.08);
+    backdrop-filter:blur(2px);
+    transition:transform .14s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    will-change:left,top;
+  }
+  #sec-embeddings .emb-word:hover,
+  #sec-embeddings .emb-word.is-active{
+    transform:translate(-50%,-50%) scale(1.07);
+    box-shadow:0 0 0 1.5px var(--clr,var(--accent)), 0 6px 16px rgba(28,29,31,.16);
+    border-color:var(--clr,var(--accent));
+    background:#ffffff; z-index:5;
+  }
+  #sec-embeddings .emb-word .emb-dot{
+    display:inline-block; width:8px; height:8px; border-radius:50%;
+    background:var(--clr,var(--accent)); margin-right:7px; vertical-align:middle;
+    box-shadow:0 0 0 2px rgba(255,255,255,.9);
+  }
+  #sec-embeddings .emb-word.is-dim{opacity:.32;}
+
+  #sec-embeddings .emb-readout{
+    position:absolute; left:14px; bottom:14px; right:14px;
+    pointer-events:none; display:flex; gap:10px; align-items:flex-end; justify-content:space-between;
+    flex-wrap:wrap;
+  }
+  #sec-embeddings .emb-tip{
+    pointer-events:none; max-width:60%;
+    background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:10px;
+    padding:9px 12px; font-size:13px; color:var(--muted);
+    box-shadow:0 4px 14px rgba(28,29,31,.1);
+    backdrop-filter:blur(4px); transition:opacity .25s ease;
+  }
+  #sec-embeddings .emb-tip b{color:var(--ink); font-weight:700;}
+  #sec-embeddings .emb-tip .emb-near{color:var(--accent2); font-weight:700;}
+  #sec-embeddings .emb-legend{
+    position:absolute; right:14px; top:14px; pointer-events:none;
+    display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; max-width:70%;
+  }
+  #sec-embeddings .emb-leg{
+    display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--ink);
+    background:rgba(255,255,255,.85); padding:3px 9px; border-radius:999px; border:1px solid var(--line);
+    box-shadow:0 1px 2px rgba(28,29,31,.06);
+  }
+  #sec-embeddings .emb-leg i{width:9px; height:9px; border-radius:50%; display:inline-block;}
+
+  #sec-embeddings .emb-controls{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    padding:14px 16px; border-top:1px solid var(--line); background:var(--panel);
+  }
+  #sec-embeddings button{
+    font:inherit; font-size:13.5px; font-weight:650; color:var(--ink);
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:9px 14px; cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, transform .08s ease, color .15s ease, box-shadow .15s ease;
+  }
+  #sec-embeddings button:hover{border-color:var(--accent); background:#fff;}
+  #sec-embeddings button:active{transform:translateY(1px);}
+  #sec-embeddings button.is-primary{
+    background:var(--accent); border-color:var(--accent2); color:#fff;
+  }
+  #sec-embeddings button.is-primary:hover{
+    background:var(--accent2); border-color:var(--accent2); color:#fff;
+  }
+  #sec-embeddings button.is-gold{
+    background:#fff; border-color:var(--gold); color:var(--gold);
+  }
+  #sec-embeddings button.is-gold:hover{
+    background:var(--gold); border-color:var(--gold); color:#fff;
+  }
+  #sec-embeddings button:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  #sec-embeddings .emb-spacer{flex:1 1 auto;}
+  #sec-embeddings .emb-hint{font-size:12.5px; color:var(--muted);}
+
+  #sec-embeddings .emb-foot{
+    padding:14px 16px 18px; border-top:1px solid var(--line); color:var(--muted); font-size:13.5px;
+  }
+  #sec-embeddings .emb-foot b{color:var(--ink);}
+
+  @media (max-width:560px){
+    #sec-embeddings .emb-tip{max-width:100%;}
+    #sec-embeddings .emb-legend{position:static; max-width:100%; justify-content:flex-start; padding:10px 14px 0;}
+    #sec-embeddings .emb-word{font-size:12px; padding:4px 9px;}
+  }
+</style>
+
+<section class="viz" id="sec-embeddings">
+  <div class="emb-head">
+    <p class="emb-kicker">Word embeddings</p>
+    <h2>Meaning is a place in space</h2>
+    <p class="emb-sub">Every word becomes a point. Words that mean similar things drift to the same neighborhood. Watch them sort themselves, then hover a word to see its closest neighbors.</p>
+  </div>
+
+  <div class="emb-shell">
+    <div class="emb-stage" id="emb-stage">
+      <canvas id="emb-canvas"></canvas>
+      <div class="emb-labels" id="emb-labels"></div>
+
+      <div class="emb-legend" id="emb-legend"></div>
+
+      <div class="emb-readout">
+        <div class="emb-tip" id="emb-tip">Press <b>Cluster</b> to sort the words by meaning, then hover any word.</div>
+      </div>
+    </div>
+
+    <div class="emb-controls">
+      <button id="emb-cluster" class="is-primary" type="button">Cluster by meaning</button>
+      <button id="emb-scatter" type="button">Scramble</button>
+      <button id="emb-analogy" class="is-gold" type="button">Show analogy: king - man + woman</button>
+      <div class="emb-spacer"></div>
+      <span class="emb-hint">Hover a word for nearest neighbors</span>
+    </div>
+
+    <div class="emb-foot">
+      <b>Why this matters.</b> Distance in this space equals difference in meaning. To search by idea instead of by keyword, you turn the query into a point and grab whatever sits nearest. That nearest-neighbor lookup is exactly what powers semantic search and the retrieval step in RAG.
+      <br><span style="color:var(--muted); font-size:12.5px;">Note: real embeddings live in hundreds of dimensions. This is an honest 2D flattening, so the relative neighborhoods hold even though the exact distances are simplified.</span>
+    </div>
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var root = document.getElementById('sec-embeddings');
+  if(!root) return;
+
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+
+  var stage   = root.querySelector('#emb-stage');
+  var canvas  = root.querySelector('#emb-canvas');
+  var labelsEl= root.querySelector('#emb-labels');
+  var legendEl= root.querySelector('#emb-legend');
+  var tipEl   = root.querySelector('#emb-tip');
+  var btnCluster = root.querySelector('#emb-cluster');
+  var btnScatter = root.querySelector('#emb-scatter');
+  var btnAnalogy = root.querySelector('#emb-analogy');
+  var ctx = canvas.getContext('2d');
+
+  // ----- color palette pulled from CSS vars (host-defined) -----
+  function cssVar(name, fallback){
+    var v = getComputedStyle(root).getPropertyValue(name);
+    return (v && v.trim()) ? v.trim() : fallback;
+  }
+  var C = {
+    ink:    cssVar('--ink','#1c1d1f'),
+    muted:  cssVar('--muted','#6b7280'),
+    line:   cssVar('--line','#e6dfce'),
+    accent: cssVar('--accent','#2f8cff'),
+    accent2:cssVar('--accent2','#0b5394'),
+    gold:   cssVar('--gold','#d97706'),
+    gap:    cssVar('--gap','#dc2626')
+  };
+
+  // ----- clusters: each word has a "true" meaning position (target) in [0..1] space -----
+  // hubX/hubY = cluster center; words jitter around it.
+  // Each 4-word group is laid out as a diamond (left / right / top / bottom)
+  // around its hub so the pills never overlap. The left->right offset inside
+  // Royalty (king->queen) is kept identical to the left->right offset inside
+  // the Gender group (man->woman), so the classic analogy
+  // king - man + woman lands exactly on queen.
+  var clusters = [
+    { name:'Royalty', color:C.gold,    hub:[0.24,0.30],
+      words:[ ['king',[-0.085,0.0]], ['queen',[0.085,0.0]], ['prince',[0.0,-0.11]], ['princess',[0.0,0.11]] ] },
+    { name:'Animals', color:C.accent2, hub:[0.76,0.30],
+      words:[ ['dog',[-0.085,0.0]], ['cat',[0.085,0.0]], ['puppy',[0.0,-0.11]], ['kitten',[0.0,0.11]] ] },
+    { name:'Finance', color:C.accent,  hub:[0.27,0.74],
+      words:[ ['money',[-0.095,0.0]], ['bank',[0.085,0.0]], ['invest',[0.0,-0.11]], ['savings',[0.0,0.11]] ] },
+    { name:'Gender axis', color:C.gap, hub:[0.74,0.74],
+      words:[ ['man',[-0.085,0.0]], ['woman',[0.085,0.0]] ] }
+  ];
+
+  // Build node list
+  var nodes = [];
+  clusters.forEach(function(cl, ci){
+    cl.words.forEach(function(w){
+      nodes.push({
+        word: w[0],
+        cluster: ci,
+        color: cl.color,
+        // semantic target in normalized space
+        tx: cl.hub[0] + w[1][0],
+        ty: cl.hub[1] + w[1][1],
+        // current animated normalized position
+        cx: Math.random(), cy: Math.random(),
+        // render position (px) filled each frame
+        px: 0, py: 0,
+        el: null
+      });
+    });
+  });
+
+  function byWord(w){ for(var i=0;i<nodes.length;i++){ if(nodes[i].word===w) return nodes[i]; } return null; }
+
+  // ----- DOM labels -----
+  nodes.forEach(function(n){
+    var el = document.createElement('div');
+    el.className = 'emb-word';
+    el.style.setProperty('--clr', n.color);
+    el.innerHTML = '<span class="emb-dot"></span>' + n.word;
+    el.setAttribute('data-word', n.word);
+    labelsEl.appendChild(el);
+    n.el = el;
+
+    el.addEventListener('mouseenter', function(){ focusWord(n); });
+    el.addEventListener('mouseleave', function(){ if(!pinned) clearFocus(); });
+    el.addEventListener('click', function(){
+      if(pinned === n){ pinned = null; clearFocus(); }
+      else { pinned = n; focusWord(n); }
+    });
+  });
+
+  // legend
+  clusters.forEach(function(cl){
+    var s = document.createElement('span');
+    s.className = 'emb-leg';
+    s.innerHTML = '<i style="background:'+cl.color+'"></i>'+cl.name;
+    legendEl.appendChild(s);
+  });
+
+  // ----- sizing / HiDPI -----
+  var W=0, H=0, DPR=1, PAD=46;
+  function resize(){
+    var r = stage.getBoundingClientRect();
+    W = Math.max(2, r.width); H = Math.max(2, r.height);
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(W*DPR); canvas.height = Math.round(H*DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  // map normalized [0..1] -> pixel inside padded box
+  function nx(v){ return PAD + v*(W-2*PAD); }
+  function ny(v){ return PAD + v*(H-2*PAD); }
+
+  // ----- state -----
+  var mode = 'scattered';     // 'scattered' | 'clustered' | 'analogy'
+  var focused = null;         // node being highlighted
+  var pinned = null;          // clicked node
+  var analogy = null;         // analogy animation state
+  var morphT = 0;             // 0..1 transition progress for cluster/scatter
+  var morphActive = false;
+  var morphFrom = [];         // snapshot of cx,cy at morph start
+  var morphTo = [];           // target cx,cy
+
+  function snapshotTargets(toClustered){
+    morphFrom = nodes.map(function(n){ return [n.cx, n.cy]; });
+    morphTo = nodes.map(function(n){
+      if(toClustered) return [n.tx, n.ty];
+      // scatter: random but kept inside frame
+      return [0.08 + Math.random()*0.84, 0.08 + Math.random()*0.84];
+    });
+    morphT = 0; morphActive = true;
+  }
+
+  function doCluster(){
+    if(mode==='analogy') endAnalogy();
+    mode = 'clustered';
+    snapshotTargets(true);
+    setTip('Sorted. Words with similar meaning sit together. Hover one to see its neighbors.');
+    if(reduceMotion){ morphT=1; morphActive=false; nodes.forEach(function(n){ n.cx=n.tx; n.cy=n.ty; }); }
+  }
+  function doScatter(){
+    if(mode==='analogy') endAnalogy();
+    mode = 'scattered';
+    pinned=null; clearFocus();
+    snapshotTargets(false);
+    setTip('Scrambled. Position is meaningless now. Press Cluster to let meaning pull them together.');
+    if(reduceMotion){ morphT=1; morphActive=false; nodes.forEach(function(n,i){ n.cx=morphTo[i][0]; n.cy=morphTo[i][1]; }); }
+  }
+
+  // ----- nearest neighbors (in semantic target space) -----
+  function neighbors(n, k){
+    var arr = nodes.filter(function(m){ return m!==n; }).map(function(m){
+      var dx=m.tx-n.tx, dy=m.ty-n.ty;
+      return { node:m, d:Math.sqrt(dx*dx+dy*dy) };
+    });
+    arr.sort(function(a,b){ return a.d-b.d; });
+    return arr.slice(0,k);
+  }
+
+  function focusWord(n){
+    focused = n;
+    nodes.forEach(function(m){
+      m.el.classList.remove('is-active','is-dim');
+    });
+    n.el.classList.add('is-active');
+    var nn = neighbors(n, 3);
+    var keep = {}; keep[n.word]=1; nn.forEach(function(x){ keep[x.node.word]=1; });
+    nodes.forEach(function(m){ if(!keep[m.word]) m.el.classList.add('is-dim'); });
+    nn.forEach(function(x){ x.node.el.classList.add('is-active'); });
+    var names = nn.map(function(x){ return x.node.word; }).join(', ');
+    setTip('<b>'+n.word+'</b> sits closest to <span class="emb-near">'+names+'</span>. Closer in space means closer in meaning.');
+  }
+  function clearFocus(){
+    focused = null;
+    nodes.forEach(function(m){ m.el.classList.remove('is-active','is-dim'); });
+    if(mode==='clustered') setTip('Sorted. Hover any word to see its three nearest neighbors.');
+  }
+
+  function setTip(html){ tipEl.innerHTML = html; }
+
+  // ----- analogy: king - man + woman = queen -----
+  function startAnalogy(){
+    if(mode!=='clustered') doCluster();
+    mode='analogy'; pinned=null; clearFocus();
+    var king=byWord('king'), man=byWord('man'), woman=byWord('woman'), queen=byWord('queen');
+    // dim everything except the four players
+    nodes.forEach(function(m){
+      if(m===king||m===man||m===woman||m===queen) m.el.classList.add('is-active');
+      else m.el.classList.add('is-dim');
+    });
+    analogy = { king:king, man:man, woman:woman, queen:queen, t:0, stage:0 };
+    setTip('Take the point for <b>king</b>. Subtract the direction of <b>man</b>, add the direction of <b>woman</b>...');
+    if(reduceMotion){ analogy.t=1; analogy.stage=3; setTip('king minus man plus woman lands right on top of <b>queen</b>. The math of meaning works.'); }
+  }
+  function endAnalogy(){
+    analogy=null;
+    nodes.forEach(function(m){ m.el.classList.remove('is-active','is-dim'); });
+  }
+
+  // ----- main loop -----
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function easeInOut(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // advance morph
+    if(morphActive){
+      morphT += reduceMotion ? 1 : 0.022;
+      if(morphT>=1){ morphT=1; morphActive=false; }
+      var e = easeInOut(morphT);
+      nodes.forEach(function(n,i){
+        n.cx = lerp(morphFrom[i][0], morphTo[i][0], e);
+        n.cy = lerp(morphFrom[i][1], morphTo[i][1], e);
+      });
+    }
+
+    // compute pixel positions
+    nodes.forEach(function(n){ n.px = nx(n.cx); n.py = ny(n.cy); });
+
+    // soft cluster halos when clustered
+    if(mode==='clustered' && !morphActive){
+      clusters.forEach(function(cl, ci){
+        var members = nodes.filter(function(n){ return n.cluster===ci; });
+        if(members.length<2) return;
+        var minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;
+        members.forEach(function(n){ minx=Math.min(minx,n.px); miny=Math.min(miny,n.py); maxx=Math.max(maxx,n.px); maxy=Math.max(maxy,n.py); });
+        var cx=(minx+maxx)/2, cy=(miny+maxy)/2;
+        var rad=Math.max((maxx-minx),(maxy-miny))/2 + 46;
+        var g = ctx.createRadialGradient(cx,cy,8,cx,cy,rad);
+        g.addColorStop(0, hexA(cl.color,0.16));
+        g.addColorStop(1, hexA(cl.color,0));
+        ctx.fillStyle=g;
+        ctx.beginPath(); ctx.arc(cx,cy,rad,0,Math.PI*2); ctx.fill();
+      });
+    }
+
+    // neighbor connection lines on focus
+    if(focused && !morphActive && mode==='clustered'){
+      var nn = neighbors(focused,3);
+      nn.forEach(function(x){
+        var m=x.node;
+        ctx.strokeStyle = hexA(focused.color, 0.75);
+        ctx.lineWidth = 1.6;
+        ctx.setLineDash([5,5]);
+        ctx.beginPath(); ctx.moveTo(focused.px,focused.py); ctx.lineTo(m.px,m.py); ctx.stroke();
+        ctx.setLineDash([]);
+        // distance label at midpoint
+        var mx=(focused.px+m.px)/2, my=(focused.py+m.py)/2;
+        var dist = Math.round(x.d*100)/100;
+        ctx.font='600 11px -apple-system,Segoe UI,Roboto,sans-serif';
+        ctx.fillStyle=hexA(C.ink,0.88);
+        ctx.textAlign='center';
+        ctx.fillText(dist.toFixed(2), mx, my-4);
+      });
+    }
+
+    // dots for every node (under labels)
+    nodes.forEach(function(n){
+      // white halo so the point reads on cream and inside cluster tints
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,255,255,.95)';
+      ctx.arc(n.px, n.py, 4.4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = hexA(n.color, 0.95);
+      ctx.arc(n.px, n.py, 3.0, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    // analogy drawing
+    if(mode==='analogy' && analogy){ drawAnalogy(); }
+
+    // position the DOM labels
+    nodes.forEach(function(n){
+      n.el.style.left = n.px + 'px';
+      n.el.style.top  = n.py + 'px';
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  function drawAnalogy(){
+    var a=analogy;
+    if(!reduceMotion){ a.t += 0.012; }
+    // stages: 0 build king-man vector, 1 add woman vector, 2 show result point, 3 land on queen
+    var king=a.king, man=a.man, woman=a.woman, queen=a.queen;
+    // direction vectors in pixel space
+    var vKM = { x: king.px - man.px, y: king.py - man.py }; // king - man
+    var vW  = { x: woman.px, y: woman.py };
+    // result point = king + (woman - man)  == king - man + woman
+    var resX = king.px + (woman.px - man.px);
+    var resY = king.py + (woman.py - man.py);
+
+    var p = Math.min(1, a.t);
+
+    // step1: arrow from man -> king (the "remove man, this is the male->royalty offset")
+    drawArrow(man.px, man.py, lerp(man.px,king.px,Math.min(1,p*2)), lerp(man.py,king.py,Math.min(1,p*2)), C.gap, 'king - man');
+
+    if(p>0.45){
+      var q=(p-0.45)/0.55;
+      // step2: from king, apply (woman - man) offset to reach result
+      drawArrow(king.px, king.py,
+        lerp(king.px, resX, Math.min(1,q*1.4)),
+        lerp(king.py, resY, Math.min(1,q*1.4)),
+        C.accent2, '+ woman');
+    }
+
+    if(p>0.92){
+      // result marker
+      ctx.beginPath();
+      ctx.fillStyle = hexA(C.gold, 0.85);
+      ctx.arc(resX, resY, 6, 0, Math.PI*2); ctx.fill();
+      ctx.lineWidth=2; ctx.strokeStyle=C.gold;
+      ctx.beginPath(); ctx.arc(resX,resY,12,0,Math.PI*2); ctx.stroke();
+
+      // ring around queen to show match
+      var pulse = 10 + Math.sin(performance.now()/220)*4;
+      ctx.lineWidth=2; ctx.strokeStyle=hexA(C.gold,0.9);
+      ctx.beginPath(); ctx.arc(queen.px, queen.py, pulse+12, 0, Math.PI*2); ctx.stroke();
+
+      if(a.stage<3){ a.stage=3; setTip('king minus man plus woman lands right on top of <b>queen</b>. The same offset that turns man into woman turns king into queen.'); }
+    } else if(p>0.45 && a.stage<2){ a.stage=2; setTip('Now add the <b>woman</b> direction. The result drifts toward the female side of royalty...'); }
+  }
+
+  function drawArrow(x1,y1,x2,y2,color,label){
+    ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=2.4;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    var ang=Math.atan2(y2-y1,x2-x1), len=10;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-len*Math.cos(ang-0.4), y2-len*Math.sin(ang-0.4));
+    ctx.lineTo(x2-len*Math.cos(ang+0.4), y2-len*Math.sin(ang+0.4));
+    ctx.closePath(); ctx.fill();
+    if(label){
+      var mx=(x1+x2)/2, my=(y1+y2)/2;
+      ctx.font='600 12px -apple-system,Segoe UI,Roboto,sans-serif';
+      ctx.fillStyle=color; ctx.textAlign='center';
+      ctx.fillText(label, mx, my-8);
+    }
+  }
+
+  // hex (#rrggbb) + alpha -> rgba()
+  function hexA(hex, a){
+    hex = (hex||'').replace('#','');
+    if(hex.length===3){ hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2]; }
+    var r=parseInt(hex.substr(0,2),16)||47,
+        g=parseInt(hex.substr(2,2),16)||140,
+        b=parseInt(hex.substr(4,2),16)||255;
+    return 'rgba('+r+','+g+','+b+','+a+')';
+  }
+
+  // ----- wire controls -----
+  btnCluster.addEventListener('click', doCluster);
+  btnScatter.addEventListener('click', doScatter);
+  btnAnalogy.addEventListener('click', function(){
+    if(mode==='analogy'){ doCluster(); }
+    else { startAnalogy(); }
+  });
+
+  // ----- boot -----
+  resize();
+  window.addEventListener('resize', resize);
+  // start scattered, then auto-cluster shortly so the sort is the first thing seen
+  nodes.forEach(function(n){ n.cx=0.08+Math.random()*0.84; n.cy=0.08+Math.random()*0.84; });
+  requestAnimationFrame(draw);
+  if(!reduceMotion){
+    setTimeout(doCluster, 700);
+  } else {
+    doCluster();
+  }
+})();
+</script>
+    </div>
+    <div class="block-foot">
+      <a class="watch" href="https://www.youtube.com/watch?v=wgfSDrqYMJ4" target="_blank" rel="noopener">&#9654; Watch: What are Word Embeddings? (IBM Technology)</a>
+      <a class="drill" href="llm-spaced-repetition.html" target="_blank" rel="noopener">Drill these cards in the study app &rarr;</a>
+    </div>
+  </section>
+<div class="group-label">How it thinks</div>
+  <section class="block">
+    <div class="block-head"><h2>3. Attention</h2><p class="cap">For each word, the model weighs which other words matter. Click a word to see what it looks at.</p></div>
+    <div class="viz-host">
+      <style>
+  #sec-attention{
+    width:100%;max-width:980px;background:var(--panel);
+    border:1px solid var(--line);border-radius:18px;
+    padding:28px 28px 24px;box-sizing:border-box;
+    color:var(--ink);
+    box-shadow:0 1px 2px rgba(28,29,31,.04),0 8px 28px rgba(28,29,31,.05);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  #sec-attention *{box-sizing:border-box;}
+  #sec-attention .head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:4px;}
+  #sec-attention h2{font-size:21px;margin:0;font-weight:650;letter-spacing:-0.01em;color:var(--ink);}
+  #sec-attention .sub{color:var(--muted);font-size:13.5px;margin:6px 0 20px;line-height:1.55;max-width:660px;}
+  #sec-attention .sub b{color:var(--ink);font-weight:600;}
+
+  #sec-attention .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;}
+  #sec-attention .seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;padding:3px;gap:2px;}
+  #sec-attention .seg button{appearance:none;border:0;background:transparent;color:var(--muted);
+    font-size:12.5px;font-weight:560;padding:7px 13px;border-radius:7px;cursor:pointer;
+    transition:background .2s ease,color .2s ease;font-family:inherit;}
+  #sec-attention .seg button.on{background:var(--accent);color:#ffffff;
+    box-shadow:0 1px 4px rgba(47,140,255,.32);}
+  #sec-attention .seg button:not(.on):hover{color:var(--ink);}
+  #sec-attention .hint{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:7px;}
+  #sec-attention .pulse{width:7px;height:7px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 0 rgba(47,140,255,.45);animation:satPulse 2.2s ease-out infinite;}
+  @keyframes satPulse{0%{box-shadow:0 0 0 0 rgba(47,140,255,.45);}70%{box-shadow:0 0 0 7px rgba(47,140,255,0);}100%{box-shadow:0 0 0 0 rgba(47,140,255,0);}}
+
+  #sec-attention .stage{position:relative;background:var(--panel2);border:1px solid var(--line);
+    border-radius:14px;padding:26px 8px 22px;overflow:hidden;}
+  #sec-attention svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;}
+  #sec-attention .tokens{position:relative;z-index:2;display:flex;flex-wrap:wrap;justify-content:center;
+    gap:14px 9px;padding:6px 10px;}
+  #sec-attention .tok{position:relative;appearance:none;font-family:inherit;
+    background:var(--panel);border:1px solid var(--line);color:var(--ink);
+    font-size:15px;font-weight:520;padding:9px 13px;border-radius:9px;cursor:pointer;
+    box-shadow:0 1px 1px rgba(28,29,31,.04);
+    transition:transform .25s ease,background .25s ease,border-color .25s ease,box-shadow .25s ease,color .25s ease;
+    white-space:nowrap;}
+  #sec-attention .tok:hover{border-color:var(--accent);color:var(--accent2);}
+  /* attended (non-query) words tint toward blue, scaled by the JS-set --aw (0..1) */
+  #sec-attention .tok.attended{border-color:var(--accent);
+    background:color-mix(in srgb, var(--accent) calc(var(--aw,0) * 16%), var(--panel));
+    color:var(--accent2);font-weight:560;}
+  #sec-attention .tok.query{background:var(--accent);color:#ffffff;border-color:var(--accent2);
+    box-shadow:0 2px 10px rgba(47,140,255,.30);transform:translateY(-2px);font-weight:650;}
+  #sec-attention .tok .wt{position:absolute;top:-10px;right:-7px;font-size:10px;font-weight:700;
+    background:var(--accent2);color:#ffffff;border-radius:7px;padding:1px 5px;line-height:1.4;
+    box-shadow:0 1px 3px rgba(11,83,148,.28);
+    opacity:0;transform:scale(.7);transition:opacity .25s ease,transform .25s ease;pointer-events:none;}
+  #sec-attention .tok.attended .wt{opacity:1;transform:scale(1);}
+  #sec-attention .qbadge{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);
+    font-size:9px;font-weight:800;letter-spacing:.08em;background:var(--accent2);color:#ffffff;
+    border-radius:5px;padding:1px 6px;line-height:1.5;opacity:0;transition:opacity .25s ease;white-space:nowrap;}
+  #sec-attention .tok.query .qbadge{opacity:1;}
+
+  #sec-attention .barsblock{margin-top:22px;}
+  #sec-attention .barsblock .lbl{font-size:11px;color:var(--muted);letter-spacing:.05em;
+    text-transform:uppercase;margin-bottom:9px;display:flex;align-items:center;gap:8px;}
+  #sec-attention .bars{display:flex;align-items:flex-end;gap:6px;height:80px;
+    padding:0 4px;border-bottom:1px solid var(--line);}
+  #sec-attention .barcol{flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:flex-end;height:100%;min-width:0;gap:5px;}
+  #sec-attention .barwrap{width:100%;max-width:46px;display:flex;flex-direction:column;
+    align-items:center;justify-content:flex-end;gap:3px;height:100%;}
+  #sec-attention .barpct{font-size:9.5px;font-weight:700;color:var(--accent2);line-height:1;
+    opacity:0;transition:opacity .35s ease;}
+  #sec-attention .barcol.show .barpct{opacity:1;}
+  #sec-attention .bar{width:100%;border-radius:5px 5px 0 0;
+    background:linear-gradient(180deg,var(--accent),var(--accent2));
+    height:2px;transition:height .55s cubic-bezier(.22,1,.36,1),opacity .4s ease;opacity:.92;}
+  #sec-attention .barlab{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;max-width:100%;text-align:center;}
+  #sec-attention .barcol.isq .bar{background:linear-gradient(180deg,var(--gold),#b45f04);}
+  #sec-attention .barcol.isq .barpct{color:var(--gold);}
+  #sec-attention .barcol.isq .barlab{color:var(--gold);font-weight:650;}
+
+  #sec-attention .qvk{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;}
+  #sec-attention .card{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:11px;padding:12px 14px;}
+  #sec-attention .card .k{font-size:10px;font-weight:800;letter-spacing:.1em;margin-bottom:5px;}
+  #sec-attention .card.q .k{color:var(--accent2);}
+  #sec-attention .card.k_ .k{color:var(--accent);}
+  #sec-attention .card.v .k{color:var(--gold);}
+  #sec-attention .card .d{font-size:12px;color:var(--muted);line-height:1.45;}
+  #sec-attention .card .d b{color:var(--ink);font-weight:600;}
+
+  #sec-attention .foot{margin-top:16px;font-size:12px;color:var(--muted);line-height:1.5;
+    display:flex;gap:8px;align-items:flex-start;}
+  #sec-attention .foot .dot{color:var(--accent);font-size:16px;line-height:1;flex:0 0 auto;margin-top:-1px;}
+
+  @media (prefers-reduced-motion: reduce){
+    #sec-attention *{transition:none !important;animation:none !important;}
+  }
+  @media (max-width:560px){
+    #sec-attention .tok{font-size:13px;padding:8px 10px;}
+    #sec-attention h2{font-size:18px;}
+  }
+</style>
+
+<section class="viz" id="sec-attention">
+  <div class="head">
+    <h2>Self-Attention, made visible</h2>
+    <div class="hint"><span class="pulse"></span><span id="sa-status">auto-cycling queries</span></div>
+  </div>
+  <p class="sub">Every word looks at every other word and decides how much to borrow from each. Click a word to make it the <b style="color:var(--accent2)">query</b>, then watch which words it leans on. Notice the payoff: the pronoun <b>it</b> resolves to a different word when the last word of the sentence changes.</p>
+
+  <div class="controls">
+    <div class="seg" id="sa-sentpick" role="tablist" aria-label="Sentence">
+      <button data-sent="0" class="on">"...too tired"</button>
+      <button data-sent="1">"...too wide"</button>
+    </div>
+    <div class="hint" id="sa-readout"></div>
+  </div>
+
+  <div class="stage" id="sa-stage">
+    <svg class="wires" id="sa-wires" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div class="tokens" id="sa-tokens"></div>
+  </div>
+
+  <div class="barsblock">
+    <div class="lbl">attention weights &nbsp;<span style="color:var(--muted)">from</span>&nbsp; <span id="sa-qword" style="color:var(--accent2)">it</span></div>
+    <div class="bars" id="sa-bars"></div>
+  </div>
+
+  <div class="qvk">
+    <div class="card q"><div class="k">QUERY (Q)</div><div class="d">What <b id="sa-qword2">it</b> is looking for: a learned "question" vector that probes every other word.</div></div>
+    <div class="card k_"><div class="k">KEYS (K)</div><div class="d">Each word's "label." The query compared against every key gives a raw match score per word.</div></div>
+    <div class="card v"><div class="k">VALUES (V)</div><div class="d">The content pulled back, blended by the weights above. A heavier blue line means more of that word flows in.</div></div>
+  </div>
+
+  <div class="foot"><span class="dot">&bull;</span><span>The match scores are squashed through softmax so the weights for one query always sum to 100 percent. Weights here are illustrative, not from a live model, but they follow how real attention behaves: pronouns latch onto their referent, verbs onto their subject and object.</span></div>
+</section>
+
+<script>
+(function(){
+  var root = document.getElementById('sec-attention');
+  if(!root) return;
+
+  var reduceMotion = false;
+  try { reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){}
+
+  // ----- Data: two sentences. weights[queryIndex] = array of weights over all tokens (sum ~1).
+  var SENTENCES = [
+    {
+      label: 'tired',
+      tokens: ['The','animal','did','not','cross','the','street','because','it','was','too','tired'],
+      // hand-authored, sensible attention. each row sums to ~1.0
+      weights: {
+        0:  [.45,.30,.02,.02,.03,.02,.07,.01,.02,.01,.01,.04],   // The -> animal
+        1:  [.10,.46,.03,.02,.06,.02,.06,.02,.06,.04,.02,.11],   // animal -> self + tired
+        2:  [.04,.18,.30,.10,.20,.02,.04,.02,.04,.02,.02,.02],   // did -> cross/animal
+        3:  [.03,.10,.18,.30,.22,.02,.04,.02,.03,.02,.02,.02],   // not -> did/cross
+        4:  [.05,.30,.06,.06,.20,.04,.18,.02,.04,.02,.01,.02],   // cross -> animal(subj)+street(obj)
+        5:  [.05,.06,.02,.02,.04,.30,.42,.02,.02,.01,.01,.03],   // the -> street
+        6:  [.04,.14,.02,.02,.20,.16,.30,.02,.04,.02,.01,.03],   // street -> cross
+        7:  [.02,.10,.05,.05,.18,.02,.06,.30,.10,.04,.04,.04],   // because -> cross/clause
+        8:  [.03,.52,.02,.02,.04,.02,.10,.03,.10,.03,.02,.07],   // IT -> ANIMAL (signature)
+        9:  [.03,.20,.04,.04,.06,.02,.06,.03,.22,.10,.05,.15],   // was -> it/animal/tired
+        10: [.02,.06,.02,.02,.03,.02,.03,.02,.08,.08,.18,.44],   // too -> tired
+        11: [.03,.30,.02,.02,.04,.02,.06,.03,.12,.06,.06,.24]    // tired -> animal+self
+      }
+    },
+    {
+      label: 'wide',
+      tokens: ['The','animal','did','not','cross','the','street','because','it','was','too','wide'],
+      weights: {
+        0:  [.45,.30,.02,.02,.03,.02,.07,.01,.02,.01,.01,.04],
+        1:  [.10,.48,.03,.02,.07,.02,.07,.02,.05,.04,.02,.08],
+        2:  [.04,.18,.30,.10,.20,.02,.04,.02,.04,.02,.02,.02],
+        3:  [.03,.10,.18,.30,.22,.02,.04,.02,.03,.02,.02,.02],
+        4:  [.05,.30,.06,.06,.20,.04,.18,.02,.04,.02,.01,.02],
+        5:  [.05,.05,.02,.02,.04,.30,.43,.02,.02,.01,.01,.03],
+        6:  [.04,.10,.02,.02,.18,.16,.30,.02,.04,.02,.02,.08],   // street -> self + wide
+        7:  [.02,.07,.05,.05,.17,.04,.11,.30,.07,.04,.04,.04],
+        8:  [.03,.06,.02,.02,.05,.06,.52,.03,.09,.03,.02,.07],   // IT -> STREET (flipped)
+        9:  [.03,.06,.04,.04,.06,.04,.20,.03,.22,.10,.05,.13],   // was -> it/street/wide
+        10: [.02,.03,.02,.02,.03,.02,.06,.02,.08,.08,.18,.44],   // too -> wide
+        11: [.03,.06,.02,.02,.05,.04,.30,.03,.12,.06,.06,.21]    // wide -> street+self
+      }
+    }
+  ];
+
+  var tokensEl = root.querySelector('#sa-tokens');
+  var barsEl   = root.querySelector('#sa-bars');
+  var svg      = root.querySelector('#sa-wires');
+  var stage    = root.querySelector('#sa-stage');
+  var statusEl = root.querySelector('#sa-status');
+  var readoutEl= root.querySelector('#sa-readout');
+  var qwordEls = [root.querySelector('#sa-qword'), root.querySelector('#sa-qword2')];
+  var sentBtns = Array.prototype.slice.call(root.querySelectorAll('#sa-sentpick button'));
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var sentIdx = 0;
+  var queryIdx = 8;            // start on "it"
+  var userInteracted = false;
+  var cycleTimer = null;
+
+  var tokButtons = [];
+  var barCols = [];
+  var barFills = [];
+  var barLabs = [];
+  var barPcts = [];
+
+  // animation state for smooth weight transitions
+  var curW = [];   // currently rendered weights (animated)
+  var tgtW = [];   // target weights
+  var rafId = null;
+
+  // ---------- build tokens + bars for current sentence ----------
+  function build(){
+    var s = SENTENCES[sentIdx];
+    var n = s.tokens.length;
+    tokensEl.innerHTML = '';
+    barsEl.innerHTML = '';
+    tokButtons = []; barCols = []; barFills = []; barLabs = []; barPcts = [];
+
+    s.tokens.forEach(function(word, i){
+      var b = document.createElement('button');
+      b.className = 'tok';
+      b.type = 'button';
+      b.setAttribute('data-i', i);
+      b.innerHTML = '<span class="txt"></span><span class="wt"></span><span class="qbadge">QUERY</span>';
+      b.querySelector('.txt').textContent = word;
+      b.addEventListener('click', function(){
+        userInteracted = true;
+        stopCycle();
+        setStatus('you picked &bull; click any word');
+        setQuery(i, true);
+      });
+      tokensEl.appendChild(b);
+      tokButtons.push(b);
+
+      var col = document.createElement('div');
+      col.className = 'barcol';
+      var wrap = document.createElement('div');
+      wrap.className = 'barwrap';
+      var pct = document.createElement('div');
+      pct.className = 'barpct';
+      var fill = document.createElement('div');
+      fill.className = 'bar';
+      var lab = document.createElement('div');
+      lab.className = 'barlab';
+      lab.textContent = word;
+      wrap.appendChild(pct); wrap.appendChild(fill);
+      col.appendChild(wrap); col.appendChild(lab);
+      barsEl.appendChild(col);
+      barCols.push(col); barFills.push(fill); barLabs.push(lab); barPcts.push(pct);
+    });
+
+    curW = new Array(n).fill(0);
+    tgtW = new Array(n).fill(0);
+  }
+
+  function setStatus(html){ statusEl.innerHTML = html; }
+
+  // ---------- selecting a query ----------
+  function setQuery(i, animate){
+    queryIdx = i;
+    var s = SENTENCES[sentIdx];
+    var word = s.tokens[i];
+    qwordEls.forEach(function(el){ if(el) el.textContent = word; });
+
+    var w = s.weights[i].slice();
+    tgtW = w;
+    if(!animate || reduceMotion){ curW = w.slice(); }
+
+    // token styling. --aw (0..1, normalized to the top weight) drives the blue tint depth.
+    var wmax = 0;
+    for(var m=0;m<w.length;m++){ if(m!==i && w[m]>wmax) wmax=w[m]; }
+    if(wmax<=0) wmax=1;
+    tokButtons.forEach(function(b, j){
+      b.classList.toggle('query', j === i);
+      var attended = (j !== i) && w[j] >= 0.12;
+      b.classList.toggle('attended', attended);
+      b.style.setProperty('--aw', attended ? (w[j]/wmax).toFixed(3) : '0');
+      var wtEl = b.querySelector('.wt');
+      wtEl.textContent = Math.round(w[j]*100) + '%';
+    });
+    // bar query highlight
+    barCols.forEach(function(c, j){ c.classList.toggle('isq', j === i); });
+
+    // readout: name the top attended word (excluding self)
+    var top = -1, topv = -1;
+    for(var k=0;k<w.length;k++){ if(k!==i && w[k]>topv){ topv=w[k]; top=k; } }
+    if(top >= 0){
+      readoutEl.innerHTML = '<span style="color:var(--accent2);font-weight:650">'+word+'</span>'+
+        ' &rarr; <span style="color:var(--accent2);font-weight:650">'+s.tokens[top]+'</span>'+
+        ' <span style="opacity:.75">'+Math.round(topv*100)+'%</span>';
+    } else { readoutEl.innerHTML = ''; }
+
+    startAnim();
+  }
+
+  // ---------- geometry: center of a token relative to the stage ----------
+  function tokCenter(idx){
+    var tr = tokButtons[idx].getBoundingClientRect();
+    var sr = stage.getBoundingClientRect();
+    return {
+      x: tr.left - sr.left + tr.width/2,
+      y: tr.top  - sr.top  + tr.height/2,
+      w: tr.width, h: tr.height
+    };
+  }
+
+  // ---------- draw curved wires using curW ----------
+  function drawWires(){
+    var sr = stage.getBoundingClientRect();
+    svg.setAttribute('viewBox', '0 0 ' + sr.width + ' ' + sr.height);
+    svg.innerHTML = '';
+    if(queryIdx == null) return;
+    var q = tokCenter(queryIdx);
+    var n = curW.length;
+
+    // sort so heaviest wires draw last (on top)
+    var order = [];
+    for(var i=0;i<n;i++){ if(i!==queryIdx) order.push(i); }
+    order.sort(function(a,b){ return curW[a]-curW[b]; });
+
+    var topIdx = order.length ? order[order.length-1] : -1;
+    var dotsDrawn = 0;
+    order.forEach(function(j){
+      var w = curW[j];
+      // floor raised so faint links don't clutter the cream stage
+      if(w < 0.045) return;
+      var t = tokCenter(j);
+      // bow each wire below the token row so curves separate instead of stacking
+      var midx = (q.x + t.x)/2;
+      var sameRow = Math.abs(q.y - t.y) < 8;
+      var dist = Math.abs(q.x - t.x);
+      var bow = Math.min(78, 26 + dist*0.20);
+      var cy = sameRow ? (q.y + bow + 16) : (q.y + t.y)/2 + bow*0.35;
+      var cx = midx;
+
+      var path = document.createElementNS(SVGNS,'path');
+      var d = 'M '+q.x+' '+(q.y+10)+' Q '+cx+' '+cy+' '+t.x+' '+(t.y+10);
+      path.setAttribute('d', d);
+      path.setAttribute('fill','none');
+      var isTop = (j === topIdx);
+      // thickness scaled by weight; opacity scaled by weight so heavy links read on cream
+      var thick = 1.0 + w*16;
+      var op = 0.14 + Math.min(0.74, w*1.7);
+      // blue everywhere; the single strongest link is the darker Briefly blue
+      path.setAttribute('stroke', isTop ? 'var(--accent2)' : 'var(--accent)');
+      path.setAttribute('stroke-width', thick.toFixed(2));
+      path.setAttribute('stroke-opacity', op.toFixed(3));
+      path.setAttribute('stroke-linecap','round');
+      svg.appendChild(path);
+
+      // traveling dot only on the two strongest links, to keep motion calm
+      if(!reduceMotion && w >= 0.15 && dotsDrawn < 2){
+        dotsDrawn++;
+        var dot = document.createElementNS(SVGNS,'circle');
+        dot.setAttribute('r', (1.8 + w*3).toFixed(2));
+        dot.setAttribute('fill', isTop ? 'var(--accent2)' : 'var(--accent)');
+        dot.setAttribute('opacity','0.9');
+        var anim = document.createElementNS(SVGNS,'animateMotion');
+        anim.setAttribute('dur', (2.6 - w).toFixed(2)+'s');
+        anim.setAttribute('repeatCount','indefinite');
+        anim.setAttribute('path', d);
+        dot.appendChild(anim);
+        svg.appendChild(dot);
+      }
+    });
+  }
+
+  // ---------- update bars from curW ----------
+  function drawBars(){
+    var max = 0;
+    for(var i=0;i<curW.length;i++){ if(curW[i]>max) max=curW[i]; }
+    if(max<=0) max=1;
+    for(var j=0;j<curW.length;j++){
+      var h = (curW[j]/max)*60 + 2;
+      barFills[j].style.height = h.toFixed(1)+'px';
+      barFills[j].style.opacity = (0.4 + (curW[j]/max)*0.55).toFixed(2);
+      // show a legible percentage above bars that carry meaningful weight
+      var pct = Math.round(curW[j]*100);
+      barPcts[j].textContent = pct + '%';
+      barCols[j].classList.toggle('show', curW[j] >= 0.08);
+    }
+  }
+
+  // ---------- animation loop: ease curW toward tgtW ----------
+  function startAnim(){
+    if(reduceMotion){ curW = tgtW.slice(); drawWires(); drawBars(); return; }
+    if(rafId) return;
+    var lastT = 0;
+    function step(ts){
+      if(!lastT) lastT = ts;
+      var dt = Math.min(0.05, (ts-lastT)/1000); lastT = ts;
+      var done = true;
+      var speed = 6.5; // higher = snappier
+      for(var i=0;i<curW.length;i++){
+        var d = tgtW[i] - curW[i];
+        if(Math.abs(d) > 0.0008){
+          curW[i] += d * Math.min(1, dt*speed);
+          done = false;
+        } else { curW[i] = tgtW[i]; }
+      }
+      drawWires();
+      drawBars();
+      if(done){ rafId = null; return; }
+      rafId = requestAnimationFrame(step);
+    }
+    rafId = requestAnimationFrame(step);
+  }
+
+  // ---------- auto-cycle queries until user interacts ----------
+  // cycle through the "interesting" words, ending on the pronoun
+  var CYCLE = [1,4,6,11,8];  // animal, cross, street, last-word, it
+  var cyclePos = 0;
+  function startCycle(){
+    stopCycle();
+    if(reduceMotion){ setQuery(8, false); return; }
+    cycleTimer = setInterval(function(){
+      if(userInteracted){ stopCycle(); return; }
+      cyclePos = (cyclePos + 1) % CYCLE.length;
+      setQuery(CYCLE[cyclePos], true);
+    }, 2600);
+  }
+  function stopCycle(){ if(cycleTimer){ clearInterval(cycleTimer); cycleTimer = null; } }
+
+  // ---------- sentence toggle ----------
+  sentBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var idx = parseInt(btn.getAttribute('data-sent'),10);
+      if(idx === sentIdx) return;
+      sentBtns.forEach(function(b){ b.classList.toggle('on', b===btn); });
+      sentIdx = idx;
+      build();
+      // keep same query index (pronoun stays "it"), re-render with animation
+      setQuery(queryIdx, true);
+    });
+  });
+
+  // ---------- redraw wires on resize ----------
+  var resizeRAF = null;
+  window.addEventListener('resize', function(){
+    if(resizeRAF) cancelAnimationFrame(resizeRAF);
+    resizeRAF = requestAnimationFrame(function(){ drawWires(); });
+  });
+
+  // ---------- init ----------
+  build();
+  setQuery(queryIdx, false);
+  drawWires();
+  drawBars();
+  setStatus('auto-cycling queries');
+  startCycle();
+})();
+</script>
+    </div>
+    <div class="block-foot">
+      <a class="watch" href="https://www.youtube.com/watch?v=eMlx5fFNoYc" target="_blank" rel="noopener">&#9654; Watch: Attention in transformers, step-by-step (3Blue1Brown)</a>
+      <a class="drill" href="llm-spaced-repetition.html" target="_blank" rel="noopener">Drill these cards in the study app &rarr;</a>
+    </div>
+  </section>
+<div class="group-label">How it writes the answer</div>
+  <section class="block">
+    <div class="block-head"><h2>4. Next-token prediction &amp; sampling</h2><p class="cap">The model scores every possible next token, then picks one. Temperature dials the randomness.</p></div>
+    <div class="viz-host">
+      <style>
+  #sec-sampling{
+    width:100%;max-width:880px;box-sizing:border-box;
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:28px 28px 30px;color:var(--ink);
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  #sec-sampling *{box-sizing:border-box;}
+  #sec-sampling .head{margin:0 0 4px;font-size:21px;font-weight:650;letter-spacing:.2px;color:var(--ink);}
+  #sec-sampling .sub{margin:0 0 22px;color:var(--muted);font-size:13.5px;line-height:1.5;}
+  #sec-sampling .sub b{color:var(--accent2);font-weight:600;}
+
+  /* sentence row */
+  #sec-sampling .stage{
+    background:var(--panel2);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px;margin-bottom:20px;
+  }
+  #sec-sampling .sentence{
+    font-size:24px;line-height:1.5;font-weight:500;letter-spacing:.2px;color:var(--ink);
+    display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 10px;min-height:36px;
+  }
+  #sec-sampling .word{display:inline-block;}
+  #sec-sampling .word.fresh{animation:sx-pop .42s cubic-bezier(.2,.9,.25,1.2) both;}
+  @keyframes sx-pop{
+    0%{opacity:0;transform:translateY(10px) scale(.85);color:var(--accent);}
+    60%{color:var(--accent);}
+    100%{opacity:1;transform:none;color:var(--ink);}
+  }
+  #sec-sampling .blank{
+    display:inline-block;min-width:84px;border-bottom:3px solid var(--accent);
+    color:var(--accent);text-align:center;position:relative;
+  }
+  #sec-sampling .blank.pulse{animation:sx-blink 1.1s ease-in-out infinite;}
+  @keyframes sx-blink{0%,100%{opacity:1}50%{opacity:.4}}
+  #sec-sampling .done-tag{
+    color:var(--accent2);font-size:14px;font-weight:600;margin-left:6px;
+    opacity:0;transition:opacity .4s ease;
+  }
+  #sec-sampling .done-tag.show{opacity:1;}
+
+  /* chart */
+  #sec-sampling .chartwrap{margin-bottom:6px;}
+  #sec-sampling .chart-title{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1.2px;
+    margin-bottom:14px;
+  }
+  #sec-sampling .chart-title b{color:var(--ink);font-weight:600;text-transform:none;letter-spacing:.2px;font-size:13px;}
+  #sec-sampling .bars{display:flex;flex-direction:column;gap:11px;}
+  #sec-sampling .row{display:flex;align-items:center;gap:12px;transition:opacity .2s ease;}
+  #sec-sampling .tok{
+    width:104px;text-align:right;font-size:15px;color:var(--ink);font-weight:500;
+    font-variant-numeric:tabular-nums;flex:0 0 104px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  #sec-sampling .track{
+    position:relative;flex:1;height:28px;background:var(--panel2);
+    border:1px solid var(--line);border-radius:7px;overflow:hidden;
+  }
+  #sec-sampling .bar{
+    position:absolute;left:0;top:0;bottom:0;width:0%;
+    background:var(--accent2);border-radius:6px 0 0 6px;
+  }
+  #sec-sampling .row.top .bar{background:var(--accent);}
+  #sec-sampling .row.chosen .bar{
+    background:var(--accent);
+    box-shadow:inset 0 0 0 2px var(--accent2);
+  }
+  #sec-sampling .row.chosen .track{box-shadow:0 0 0 2px var(--accent);}
+  #sec-sampling .row.dim{opacity:.4;}
+  #sec-sampling .pct{
+    width:52px;text-align:right;font-size:14px;color:var(--muted);font-weight:500;
+    font-variant-numeric:tabular-nums;flex:0 0 52px;
+  }
+  #sec-sampling .row.top .pct{color:var(--accent2);font-weight:600;}
+  #sec-sampling .row.chosen .pct{color:var(--accent2);font-weight:700;}
+
+  /* badge that rides on the chosen row */
+  #sec-sampling .pick-badge{
+    margin-left:8px;font-size:11px;font-weight:600;color:var(--panel);
+    background:var(--accent2);border-radius:20px;padding:2px 9px;
+    white-space:nowrap;opacity:0;transform:translateX(-4px);
+    transition:opacity .25s ease,transform .25s ease;flex:0 0 auto;
+  }
+  #sec-sampling .row.chosen .pick-badge{opacity:1;transform:none;}
+
+  /* controls */
+  #sec-sampling .controls{
+    margin-top:24px;display:flex;flex-wrap:wrap;align-items:flex-end;
+    gap:18px 26px;
+  }
+  #sec-sampling .temp{flex:1 1 300px;min-width:260px;}
+  #sec-sampling .temp .lab{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:13px;color:var(--muted);margin-bottom:9px;
+  }
+  #sec-sampling .temp .lab b{color:var(--accent2);font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;}
+  #sec-sampling input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;
+    background:linear-gradient(90deg,var(--accent),var(--gold));outline:none;cursor:pointer;
+  }
+  #sec-sampling input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;
+    background:var(--accent);border:3px solid var(--panel);
+    box-shadow:0 0 0 1.5px var(--accent2),0 1px 4px rgba(28,29,31,.25);cursor:pointer;
+  }
+  #sec-sampling input[type=range]::-moz-range-thumb{
+    width:20px;height:20px;border-radius:50%;background:var(--accent);
+    border:3px solid var(--panel);box-shadow:0 0 0 1.5px var(--accent2);cursor:pointer;
+  }
+  #sec-sampling .scale{
+    display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px;
+  }
+  #sec-sampling .scale span:first-child{color:var(--accent2);}
+  #sec-sampling .scale span:last-child{color:var(--gold);}
+  #sec-sampling .btns{display:flex;gap:12px;flex:0 0 auto;}
+  #sec-sampling button{
+    font-family:inherit;font-size:14.5px;font-weight:600;color:var(--ink);
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:11px 20px;cursor:pointer;transition:transform .12s ease,background .15s ease,border-color .15s ease,box-shadow .15s ease;
+  }
+  #sec-sampling button:hover{background:var(--panel2);border-color:var(--accent2);}
+  #sec-sampling button:active{transform:translateY(1px);}
+  #sec-sampling button.primary{background:var(--accent);border-color:var(--accent);color:#ffffff;}
+  #sec-sampling button.primary:hover{background:var(--accent2);border-color:var(--accent2);}
+  #sec-sampling button:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+
+  #sec-sampling .note{
+    margin-top:20px;font-size:12.5px;color:var(--muted);line-height:1.55;
+    border-top:1px solid var(--line);padding-top:14px;
+  }
+  #sec-sampling .note .k{color:var(--accent);font-weight:600;}
+  #sec-sampling .note .g{color:var(--accent2);font-weight:600;}
+
+  @media (max-width:560px){
+    #sec-sampling .tok{width:82px;flex-basis:82px;font-size:13.5px;}
+    #sec-sampling .sentence{font-size:20px;}
+    #sec-sampling .controls{gap:16px;}
+    #sec-sampling .btns{width:100%;}
+    #sec-sampling .btns button{flex:1;}
+    #sec-sampling .pick-badge{display:none;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #sec-sampling .word.fresh{animation:none;}
+    #sec-sampling .blank.pulse{animation:none;}
+  }
+</style>
+
+<section class="viz" id="sec-sampling">
+  <h2 class="head">How a model picks the next word</h2>
+  <p class="sub">A language model does not know the next word. For each blank it scores every candidate, turns those scores into probabilities, then draws one at random in proportion to those probabilities. <b>Temperature</b> reshapes the draw: low concentrates almost all the weight on the favorite, high flattens it so unlikely words get a real chance.</p>
+
+  <div class="stage">
+    <div class="sentence" id="sx-sentence"></div>
+  </div>
+
+  <div class="chartwrap">
+    <div class="chart-title">
+      <span>Candidate next tokens</span>
+      <b id="sx-chart-label">probability at this temperature</b>
+    </div>
+    <div class="bars" id="sx-bars"></div>
+  </div>
+
+  <div class="controls">
+    <div class="temp">
+      <div class="lab"><span>Temperature</span><b id="sx-temp-val">0.80</b></div>
+      <input id="sx-temp" type="range" min="0" max="1.5" step="0.01" value="0.8" aria-label="Temperature">
+      <div class="scale"><span>0.0 &middot; predictable</span><span>0.8</span><span>1.5 &middot; creative</span></div>
+    </div>
+    <div class="btns">
+      <button class="primary" id="sx-sample">Sample a word</button>
+      <button id="sx-reset">Reset</button>
+    </div>
+  </div>
+
+  <div class="note">
+    The <span class="k">bright blue</span> bar is the model's current favorite. <span class="g">Sample</span> takes one weighted-random draw from these probabilities (it does not always pick the favorite), appends the winning token to the sentence, then shows a fresh distribution for the next blank.
+  </div>
+
+  <script>
+  (function(){
+    "use strict";
+    var root = document.getElementById('sec-sampling');
+    if(!root) return;
+
+    var reduceMotion = window.matchMedia &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // ---- data: a believable chain of next-token distributions ----
+    // Each step gives an authored base distribution. Temperature is applied as a
+    // proper softmax over logits (logit = ln(p)); at T=1 the base probs are
+    // reproduced exactly, T->0 concentrates on the max, large T flattens.
+    var CHAIN = [
+      { cands:[ // The cat sat on the ___
+        {w:"mat",p:0.41},{w:"floor",p:0.22},{w:"rug",p:0.14},
+        {w:"couch",p:0.11},{w:"windowsill",p:0.07},{w:"step",p:0.05}
+      ]},
+      { cands:[
+        {w:"and",p:0.38},{w:"by",p:0.21},{w:"near",p:0.15},
+        {w:"while",p:0.13},{w:"as",p:0.08},{w:"then",p:0.05}
+      ]},
+      { cands:[
+        {w:"watched",p:0.34},{w:"stared",p:0.22},{w:"waited",p:0.18},
+        {w:"blinked",p:0.12},{w:"yawned",p:0.09},{w:"purred",p:0.05}
+      ]},
+      { cands:[
+        {w:"the",p:0.45},{w:"a",p:0.24},{w:"its",p:0.13},
+        {w:"every",p:0.10},{w:"that",p:0.05},{w:"some",p:0.03}
+      ]},
+      { cands:[
+        {w:"quiet",p:0.30},{w:"empty",p:0.24},{w:"sunlit",p:0.19},
+        {w:"dusty",p:0.13},{w:"warm",p:0.09},{w:"distant",p:0.05}
+      ]},
+      { cands:[
+        {w:"room.",p:0.40},{w:"street.",p:0.22},{w:"garden.",p:0.16},
+        {w:"hallway.",p:0.12},{w:"world.",p:0.07},{w:"yard.",p:0.03}
+      ]}
+    ];
+    var BASE_WORDS = ["The","cat","sat","on","the"];
+    var MAX_STEPS = CHAIN.length;
+
+    // ---- state ----
+    var committed = [];
+    var stepIndex = 0;
+    var temperature = 0.8;
+    var busy = false;
+    var current = [];
+
+    // ---- DOM refs ----
+    var elSentence = document.getElementById('sx-sentence');
+    var elBars     = document.getElementById('sx-bars');
+    var elTemp     = document.getElementById('sx-temp');
+    var elTempVal  = document.getElementById('sx-temp-val');
+    var elSample   = document.getElementById('sx-sample');
+    var elReset    = document.getElementById('sx-reset');
+    var elChartLab = document.getElementById('sx-chart-label');
+
+    // ---- math: softmax over logits with temperature ----
+    // p_i(T) = softmax(ln(p_i) / T). T->0 = argmax (one-hot), T large = uniform.
+    function applyTemperature(cands, T){
+      var n = cands.length, i;
+      var logits = new Array(n);
+      for(i=0;i<n;i++){ logits[i] = Math.log(Math.max(cands[i].p, 1e-9)); }
+      if(T <= 0.001){
+        var maxI = 0;
+        for(i=1;i<n;i++){ if(logits[i] > logits[maxI]) maxI = i; }
+        return cands.map(function(c,idx){ return {w:c.w, p: idx===maxI ? 1 : 0}; });
+      }
+      var scaled = new Array(n), maxS = -Infinity;
+      for(i=0;i<n;i++){ scaled[i] = logits[i] / T; if(scaled[i] > maxS) maxS = scaled[i]; }
+      var exps = new Array(n), sum = 0;
+      for(i=0;i<n;i++){ exps[i] = Math.exp(scaled[i] - maxS); sum += exps[i]; }
+      return cands.map(function(c,idx){ return {w:c.w, p: exps[idx] / sum}; });
+    }
+
+    function recompute(){
+      var step = CHAIN[stepIndex];
+      current = step ? applyTemperature(step.cands, temperature) : [];
+    }
+
+    function topIndex(list){
+      var mi = 0;
+      for(var i=1;i<list.length;i++){ if(list[i].p > list[mi].p) mi = i; }
+      return mi;
+    }
+
+    // ---- render sentence ----
+    function renderSentence(freshIndex){
+      elSentence.innerHTML = "";
+      var all = BASE_WORDS.concat(committed);
+      all.forEach(function(w, idx){
+        var span = document.createElement('span');
+        span.className = 'word' + (freshIndex === idx ? ' fresh' : '');
+        span.textContent = w;
+        elSentence.appendChild(span);
+      });
+      if(stepIndex < MAX_STEPS){
+        var blank = document.createElement('span');
+        blank.className = 'blank pulse';
+        blank.id = 'sx-blank';
+        blank.innerHTML = '&nbsp;';
+        elSentence.appendChild(blank);
+      } else {
+        var tag = document.createElement('span');
+        tag.className = 'done-tag show';
+        tag.textContent = 'sentence complete';
+        elSentence.appendChild(tag);
+      }
+    }
+
+    // ---- build bar rows ----
+    function buildBars(){
+      elBars.innerHTML = "";
+      if(!current.length){
+        var msg = document.createElement('div');
+        msg.style.color = 'var(--muted)';
+        msg.style.fontSize = '14px';
+        msg.style.padding = '8px 0';
+        msg.textContent = 'No more candidates. The sentence is finished. Press Reset to start again.';
+        elBars.appendChild(msg);
+        return;
+      }
+      var ti = topIndex(current);
+      current.forEach(function(c, idx){
+        var row = document.createElement('div');
+        row.className = 'row' + (idx===ti ? ' top' : '');
+        row.dataset.idx = idx;
+
+        var tok = document.createElement('div');
+        tok.className = 'tok';
+        tok.textContent = c.w;
+
+        var track = document.createElement('div');
+        track.className = 'track';
+        var bar = document.createElement('div');
+        bar.className = 'bar';
+        track.appendChild(bar);
+
+        var pct = document.createElement('div');
+        pct.className = 'pct';
+        pct.textContent = Math.round(c.p*100) + '%';
+
+        var badge = document.createElement('div');
+        badge.className = 'pick-badge';
+        badge.textContent = 'chosen';
+
+        row.appendChild(tok);
+        row.appendChild(track);
+        row.appendChild(pct);
+        row.appendChild(badge);
+        elBars.appendChild(row);
+      });
+      animateBarsTo(current);
+    }
+
+    // ---- smoothly animate bar widths + pct text to match `list` ----
+    var animTokens = {};
+    function animateBarsTo(list){
+      var rows = elBars.querySelectorAll('.row');
+      var ti = topIndex(list);
+      rows.forEach(function(row){
+        var idx = parseInt(row.dataset.idx,10);
+        var target = list[idx] ? list[idx].p : 0;
+        var bar = row.querySelector('.bar');
+        var pct = row.querySelector('.pct');
+        var startW = parseFloat(bar.style.width) || 0;
+        var targetW = target*100;
+
+        if(!row.classList.contains('chosen')){
+          row.classList.toggle('top', idx===ti);
+        }
+
+        if(reduceMotion){
+          bar.style.width = targetW.toFixed(2) + '%';
+          pct.textContent = Math.round(target*100) + '%';
+          return;
+        }
+
+        if(animTokens[idx]) cancelAnimationFrame(animTokens[idx]);
+        var startT = null, dur = 320;
+        function frame(t){
+          if(startT===null) startT = t;
+          var k = Math.min(1,(t-startT)/dur);
+          var e = 1 - Math.pow(1-k,3); // easeOutCubic
+          var w = startW + (targetW-startW)*e;
+          bar.style.width = w.toFixed(2) + '%';
+          pct.textContent = Math.round(startW + (targetW-startW)*e) + '%';
+          if(k<1){ animTokens[idx] = requestAnimationFrame(frame); }
+          else { bar.style.width = targetW.toFixed(2)+'%'; pct.textContent = Math.round(targetW) + '%'; }
+        }
+        animTokens[idx] = requestAnimationFrame(frame);
+      });
+    }
+
+    // ---- temperature slider ----
+    function onTemp(){
+      temperature = parseFloat(elTemp.value);
+      elTempVal.textContent = temperature.toFixed(2);
+      recompute();
+      if(busy) return;
+      animateBarsTo(current);
+    }
+
+    // ---- weighted-random draw consistent with displayed probabilities ----
+    function weightedPick(list){
+      var total = 0, i;
+      for(i=0;i<list.length;i++){ total += list[i].p; }
+      var r = Math.random() * total, acc = 0;
+      for(i=0;i<list.length;i++){
+        acc += list[i].p;
+        if(r <= acc) return i;
+      }
+      return list.length-1;
+    }
+
+    // ---- sample: dim the field, reveal the winning row, then commit ----
+    function doSample(){
+      if(busy || stepIndex >= MAX_STEPS) return;
+      busy = true;
+      elSample.disabled = true;
+      elTemp.disabled = true;
+
+      var list = current.slice();
+      var chosen = weightedPick(list);
+      var rows = Array.prototype.slice.call(elBars.querySelectorAll('.row'));
+
+      if(reduceMotion){
+        rows.forEach(function(r,i){
+          r.classList.remove('top');
+          if(i===chosen) r.classList.add('chosen'); else r.classList.add('dim');
+        });
+        finishSample(chosen, list);
+        return;
+      }
+
+      // Highlight the drawn token: fade the rest, mark the winner.
+      rows.forEach(function(r,i){
+        r.classList.remove('top');
+        if(i===chosen){ r.classList.add('chosen'); }
+        else { r.classList.add('dim'); }
+      });
+
+      setTimeout(function(){ finishSample(chosen, list); }, 780);
+    }
+
+    function finishSample(chosen, list){
+      var word = list[chosen].w;
+      committed.push(word);
+      stepIndex++;
+      var freshIdx = BASE_WORDS.length + committed.length - 1;
+
+      renderSentence(freshIdx);
+      recompute();
+
+      var delay = reduceMotion ? 0 : 420;
+      setTimeout(function(){
+        buildBars();
+        busy = false;
+        elTemp.disabled = false;
+        if(stepIndex >= MAX_STEPS){
+          elSample.disabled = true;
+          elChartLab.textContent = "sentence complete";
+        } else {
+          elSample.disabled = false;
+        }
+      }, delay);
+    }
+
+    // ---- reset ----
+    function doReset(){
+      committed = [];
+      stepIndex = 0;
+      busy = false;
+      for(var key in animTokens){ if(animTokens[key]) cancelAnimationFrame(animTokens[key]); }
+      animTokens = {};
+      elSample.disabled = false;
+      elTemp.disabled = false;
+      elChartLab.textContent = "probability at this temperature";
+      recompute();
+      renderSentence(-1);
+      buildBars();
+    }
+
+    // ---- wire up ----
+    elTemp.addEventListener('input', onTemp);
+    elSample.addEventListener('click', doSample);
+    elReset.addEventListener('click', doReset);
+
+    // init
+    temperature = parseFloat(elTemp.value);
+    elTempVal.textContent = temperature.toFixed(2);
+    doReset();
+  })();
+  </script>
+</section>
+    </div>
+    <div class="block-foot">
+      <a class="watch" href="https://www.youtube.com/watch?v=MkaazQttbpc" target="_blank" rel="noopener">&#9654; Watch: The Secret Controls for your LLM: Temperature, Top-K, Top-P (Matt Williams)</a>
+      <a class="drill" href="llm-spaced-repetition.html" target="_blank" rel="noopener">Drill these cards in the study app &rarr;</a>
+    </div>
+  </section>
+<div class="group-label">How it learned in the first place</div>
+  <section class="block">
+    <div class="block-head"><h2>5. Backpropagation</h2><p class="cap">Training: the model guesses, measures its error, and sends that error backward to nudge every weight.</p></div>
+    <div class="viz-host">
+      <style>
+  #sec-backprop {
+    width:100%; max-width:920px; background:var(--panel);
+    border:1px solid var(--line); border-radius:16px; padding:24px;
+    box-sizing:border-box; box-shadow:0 8px 28px rgba(28,29,31,0.08);
+    color:var(--ink);
+  }
+  #sec-backprop * { box-sizing:border-box; }
+  #sec-backprop .bp-head { margin-bottom:18px; }
+  #sec-backprop h1 {
+    font-size:22px; font-weight:650; margin:0 0 6px; letter-spacing:0.2px;
+  }
+  #sec-backprop .bp-sub { color:var(--ink); font-size:14px; line-height:1.55; margin:0; max-width:660px; }
+  #sec-backprop .bp-note { color:var(--muted); font-size:12px; line-height:1.45; margin:8px 0 0; max-width:660px; font-style:italic; }
+
+  #sec-backprop .bp-stage {
+    position:relative; background:var(--panel2); border:1px solid var(--line);
+    border-radius:14px; overflow:hidden;
+  }
+  #sec-backprop svg { display:block; width:100%; height:auto; }
+
+  /* phase label that floats over the stage */
+  #sec-backprop .bp-phase {
+    position:absolute; top:12px; left:50%; transform:translateX(-50%);
+    font-size:13px; font-weight:600; letter-spacing:0.3px; padding:6px 14px;
+    border-radius:999px; background:var(--panel); border:1px solid var(--line);
+    color:var(--muted); transition:color .25s ease, border-color .25s ease, background .25s ease;
+    white-space:nowrap; pointer-events:none; box-shadow:0 2px 8px rgba(28,29,31,0.06);
+  }
+  #sec-backprop .bp-phase.is-fwd { color:var(--accent2); border-color:var(--accent); }
+  #sec-backprop .bp-phase.is-bwd { color:var(--gap); border-color:var(--gap); }
+  #sec-backprop .bp-phase.is-done { color:var(--accent2); border-color:var(--accent2); }
+
+  /* column captions under the net */
+  #sec-backprop .bp-cols {
+    display:flex; justify-content:space-between; padding:0 6px; margin-top:6px;
+    color:var(--muted); font-size:12px; letter-spacing:0.3px; font-weight:600;
+  }
+  #sec-backprop .bp-dirs {
+    display:flex; justify-content:space-between; padding:0 6px; margin-top:8px;
+  }
+  #sec-backprop .bp-dir { font-size:12px; font-weight:600; letter-spacing:0.2px; }
+  #sec-backprop .bp-dir-fwd { color:var(--accent2); }
+  #sec-backprop .bp-dir-bwd { color:var(--gap); }
+
+  /* controls */
+  #sec-backprop .bp-controls {
+    display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:18px;
+  }
+  #sec-backprop button {
+    font:inherit; font-size:14px; font-weight:600; color:var(--ink);
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:10px 18px; cursor:pointer; transition:border-color .2s ease, background .2s ease, transform .08s ease;
+  }
+  #sec-backprop button:hover { border-color:var(--accent); }
+  #sec-backprop button:active { transform:translateY(1px); }
+  #sec-backprop button:disabled { opacity:0.45; cursor:default; border-color:var(--line); }
+  #sec-backprop button.bp-run { background:var(--accent); color:#ffffff; border-color:var(--accent); }
+  #sec-backprop button.bp-run:hover { background:var(--accent2); border-color:var(--accent2); }
+  #sec-backprop button.bp-train.is-on { background:var(--gap); color:#ffffff; border-color:var(--gap); }
+  #sec-backprop button.bp-train.is-on:hover { background:var(--gap); border-color:var(--gap); }
+
+  /* readouts */
+  #sec-backprop .bp-readouts { display:flex; gap:16px; margin-left:auto; align-items:center; flex-wrap:wrap; }
+  #sec-backprop .bp-stat {
+    background:var(--panel2); border:1px solid var(--line); border-radius:10px;
+    padding:8px 14px; min-width:92px; text-align:center;
+  }
+  #sec-backprop .bp-stat .lab { display:block; color:var(--muted); font-size:11px; letter-spacing:0.4px; text-transform:uppercase; }
+  #sec-backprop .bp-stat .val { display:block; font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px; }
+  #sec-backprop .bp-stat .val.err { color:var(--gap); }
+  #sec-backprop .bp-stat .val.step { color:var(--accent); }
+
+  /* error chart */
+  #sec-backprop .bp-chart-wrap { margin-top:16px; }
+  #sec-backprop .bp-chart-cap {
+    display:flex; justify-content:space-between; align-items:baseline;
+    color:var(--muted); font-size:12px; letter-spacing:0.3px; margin-bottom:6px;
+  }
+  #sec-backprop .bp-chart {
+    background:var(--panel2); border:1px solid var(--line); border-radius:12px;
+    height:96px; width:100%;
+  }
+
+  /* legend */
+  #sec-backprop .bp-legend {
+    display:flex; flex-wrap:wrap; gap:18px; margin-top:16px; padding-top:14px;
+    border-top:1px solid var(--line); color:var(--muted); font-size:12.5px;
+  }
+  #sec-backprop .bp-legend span { display:inline-flex; align-items:center; gap:7px; }
+  #sec-backprop .bp-swatch { width:22px; height:4px; border-radius:3px; display:inline-block; }
+  #sec-backprop .bp-dot { width:11px; height:11px; border-radius:50%; display:inline-block; }
+
+  @media (max-width:560px) {
+    #sec-backprop .bp-readouts { margin-left:0; width:100%; }
+    #sec-backprop .bp-stat { flex:1; min-width:0; }
+  }
+</style>
+
+<section class="viz" id="sec-backprop">
+  <div class="bp-head">
+    <h1>How a neural network learns</h1>
+    <p class="bp-sub">A guess flows forward (left to right), gets compared to the target to measure the error, then that error travels backward (right to left) and nudges every connection to do a little better. Repeat, and the error shrinks.</p>
+    <p class="bp-note">Illustrative animation: the activations and weight changes are simulated for intuition, not exact math. The directions and the shrinking error are faithful to how training works.</p>
+  </div>
+
+  <div class="bp-stage">
+    <div class="bp-phase" id="bp-phase">Ready</div>
+    <svg id="bp-svg" viewBox="0 0 860 420" preserveAspectRatio="xMidYMid meet" aria-label="Animated neural network diagram"></svg>
+  </div>
+  <div class="bp-cols">
+    <span>Inputs</span><span>Hidden</span><span>Hidden</span><span>Output vs target</span>
+  </div>
+  <div class="bp-dirs">
+    <span class="bp-dir bp-dir-fwd">Forward pass: guess flows this way &rarr;</span>
+    <span class="bp-dir bp-dir-bwd">&larr; Backward pass: error flows this way</span>
+  </div>
+
+  <div class="bp-controls">
+    <button class="bp-run" id="bp-step">Run one step</button>
+    <button class="bp-train" id="bp-train">Train</button>
+    <button id="bp-reset">Reset</button>
+    <div class="bp-readouts">
+      <div class="bp-stat"><span class="lab">Step</span><span class="val step" id="bp-stepnum">0</span></div>
+      <div class="bp-stat"><span class="lab">Error</span><span class="val err" id="bp-errval">--</span></div>
+    </div>
+  </div>
+
+  <div class="bp-chart-wrap">
+    <div class="bp-chart-cap"><span>Error over time</span><span id="bp-chart-note">it should tick down as training runs</span></div>
+    <svg class="bp-chart" id="bp-chart" viewBox="0 0 860 96" preserveAspectRatio="none" aria-label="Error versus step chart"></svg>
+  </div>
+
+  <div class="bp-legend">
+    <span><i class="bp-swatch" style="background:var(--accent)"></i> Forward signal (the guess)</span>
+    <span><i class="bp-swatch" style="background:var(--gap)"></i> Error flowing backward</span>
+    <span><i class="bp-dot" style="background:var(--accent2)"></i> Active neuron</span>
+    <span><i class="bp-dot" style="background:var(--gold)"></i> Target</span>
+    <span>Edge thickness = weight strength (it changes as weights are nudged)</span>
+  </div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+  var root = document.getElementById('sec-backprop');
+  if (!root) return;
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // palette pulled from CSS vars so the host controls color
+  var cs = getComputedStyle(root);
+  var C = {
+    bg: cs.getPropertyValue('--bg').trim() || '#f7f3ea',
+    panel: cs.getPropertyValue('--panel').trim() || '#ffffff',
+    panel2: cs.getPropertyValue('--panel2').trim() || '#efe9da',
+    accent: cs.getPropertyValue('--accent').trim() || '#2f8cff',
+    accent2: cs.getPropertyValue('--accent2').trim() || '#0b5394',
+    gap: cs.getPropertyValue('--gap').trim() || '#dc2626',
+    gold: cs.getPropertyValue('--gold').trim() || '#d97706',
+    line: cs.getPropertyValue('--line').trim() || '#e6dfce',
+    muted: cs.getPropertyValue('--muted').trim() || '#6b7280',
+    ink: cs.getPropertyValue('--ink').trim() || '#1c1d1f'
+  };
+  // node base fill on the light stage (resting, un-activated)
+  var NODE_BASE = C.panel;
+  // resting edge styling for the light stage (ink stroke reads on cream)
+  var EDGE_COLOR = C.ink;
+  var EDGE_OP = 0.32;
+
+  var svg = document.getElementById('bp-svg');
+  var phaseEl = document.getElementById('bp-phase');
+  var stepBtn = document.getElementById('bp-step');
+  var trainBtn = document.getElementById('bp-train');
+  var resetBtn = document.getElementById('bp-reset');
+  var stepNumEl = document.getElementById('bp-stepnum');
+  var errValEl = document.getElementById('bp-errval');
+  var chart = document.getElementById('bp-chart');
+
+  // ----- network geometry -----
+  var layerSizes = [3, 4, 4, 2];
+  var W = 860, H = 420;
+  var marginX = 90, marginY = 56;
+  var usableW = W - marginX * 2;
+  var nodeR = 17;
+
+  var layers = []; // layers[l] = array of {x,y,el,glow,act}
+  var edges = [];  // {l, i, j, x1,y1,x2,y2, w, baseW, el, x mid...}
+
+  function el(tag, attrs) {
+    var n = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  // build node positions
+  function buildPositions() {
+    layers = [];
+    for (var l = 0; l < layerSizes.length; l++) {
+      var n = layerSizes[l];
+      var x = marginX + (usableW * l) / (layerSizes.length - 1);
+      var arr = [];
+      var spacing = (H - marginY * 2) / Math.max(1, (n - 1));
+      var topY = (n === 1) ? H / 2 : marginY;
+      for (var i = 0; i < n; i++) {
+        var y = (n === 1) ? H / 2 : topY + spacing * i;
+        arr.push({ x: x, y: y });
+      }
+      layers.push(arr);
+    }
+  }
+
+  var gEdges, gNodes, gOverlay;
+
+  function drawStatic() {
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    edges = [];
+
+    gEdges = el('g', {});
+    gNodes = el('g', {});
+    gOverlay = el('g', {}); // pulses travel here, above edges
+    svg.appendChild(gEdges);
+    svg.appendChild(gOverlay);
+    svg.appendChild(gNodes);
+
+    // edges
+    for (var l = 0; l < layers.length - 1; l++) {
+      for (var i = 0; i < layers[l].length; i++) {
+        for (var j = 0; j < layers[l + 1].length; j++) {
+          var a = layers[l][i], b = layers[l + 1][j];
+          var w = rand(0.25, 1.0); // weight magnitude 0..1
+          var line = el('line', {
+            x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+            stroke: EDGE_COLOR, 'stroke-width': edgeWidth(w),
+            'stroke-linecap': 'round', opacity: EDGE_OP
+          });
+          gEdges.appendChild(line);
+          edges.push({
+            l: l, i: i, j: j, x1: a.x, y1: a.y, x2: b.x, y2: b.y,
+            w: w, el: line
+          });
+        }
+      }
+    }
+
+    // nodes
+    for (var L = 0; L < layers.length; L++) {
+      for (var k = 0; k < layers[L].length; k++) {
+        var node = layers[L][k];
+        var glow = el('circle', {
+          cx: node.x, cy: node.y, r: nodeR + 7,
+          fill: 'none', stroke: C.accent, 'stroke-width': 2.5, opacity: 0
+        });
+        var circ = el('circle', {
+          cx: node.x, cy: node.y, r: nodeR,
+          fill: NODE_BASE, stroke: C.ink, 'stroke-width': 1.8, 'stroke-opacity': 0.5
+        });
+        gNodes.appendChild(glow);
+        gNodes.appendChild(circ);
+        node.el = circ;
+        node.glow = glow;
+        node.act = 0;
+      }
+    }
+
+    // target marker on output layer (gold ring on top output node)
+    var outLayer = layers[layers.length - 1];
+    if (outLayer.length) {
+      var t = outLayer[0];
+      var tring = el('circle', {
+        cx: t.x + 0, cy: t.y, r: nodeR + 12,
+        fill: 'none', stroke: C.gold, 'stroke-width': 2,
+        'stroke-dasharray': '4 5', opacity: 0.85
+      });
+      gNodes.appendChild(tring);
+      var tlabel = el('text', {
+        x: t.x + 42, y: t.y + 4, fill: C.gold,
+        'font-size': 12, 'font-family': 'inherit', 'font-weight': 600
+      });
+      tlabel.textContent = 'target';
+      gNodes.appendChild(tlabel);
+    }
+  }
+
+  function edgeWidth(w) { return 1 + w * 4.0; }
+
+  // ----- animation engine -----
+  var rafId = null;
+  var animQueue = []; // list of active tweens
+  var loopRunning = false;
+  var stepCount = 0;
+  var error = 1.0;            // simulated error, starts high
+  var history = [];          // error history for chart
+  var phaseBusy = false;     // a forward+backward run in progress
+  // speed multiplier: single steps run slow + legible, continuous training is
+  // brisker so the "error shrinks over time" takeaway lands quickly.
+  var speed = 1;
+  function spd(ms) { return ms * speed; }
+
+  function now() { return performance.now(); }
+
+  function addTween(tw) { animQueue.push(tw); ensureRaf(); }
+
+  function ensureRaf() {
+    if (rafId == null) rafId = requestAnimationFrame(frame);
+  }
+
+  function frame(t) {
+    rafId = null;
+    var alive = [];
+    for (var i = 0; i < animQueue.length; i++) {
+      var tw = animQueue[i];
+      if (tw.start == null) tw.start = t;
+      var p = (t - tw.start) / tw.dur;
+      if (p >= 1) { p = 1; }
+      var e = tw.ease ? tw.ease(p) : p;
+      tw.update(e, p);
+      if (p < 1) alive.push(tw);
+      else if (tw.done) tw.done();
+    }
+    animQueue = alive;
+    if (animQueue.length) rafId = requestAnimationFrame(frame);
+  }
+
+  function easeInOut(p) { return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2; }
+  function easeOut(p) { return 1 - Math.pow(1 - p, 3); }
+
+  function setPhase(text, mode) {
+    phaseEl.textContent = text;
+    phaseEl.className = 'bp-phase' + (mode ? ' is-' + mode : '');
+  }
+
+  function delay(ms) {
+    return new Promise(function (res) {
+      if (reduceMotion) ms = 0;
+      setTimeout(res, spd(ms));
+    });
+  }
+
+  // move a glowing pulse dot along an edge
+  function pulseEdge(edge, color, dir, dur) {
+    return new Promise(function (resolve) {
+      var x1 = edge.x1, y1 = edge.y1, x2 = edge.x2, y2 = edge.y2;
+      if (dir < 0) { x1 = edge.x2; y1 = edge.y2; x2 = edge.x1; y2 = edge.y1; }
+      var dot = el('circle', { cx: x1, cy: y1, r: 4.5, fill: color, opacity: 0.95 });
+      gOverlay.appendChild(dot);
+      // light the wire under the pulse
+      var origStroke = edge.el.getAttribute('stroke');
+      var origOp = edge.el.getAttribute('opacity');
+      edge.el.setAttribute('stroke', color);
+      edge.el.setAttribute('opacity', 0.85);
+      if (reduceMotion) {
+        if (dot.parentNode) gOverlay.removeChild(dot);
+        setTimeout(function () {
+          edge.el.setAttribute('stroke', origStroke);
+          edge.el.setAttribute('opacity', origOp);
+          resolve();
+        }, 0);
+        return;
+      }
+      addTween({
+        start: null, dur: dur, ease: easeInOut,
+        update: function (e) {
+          dot.setAttribute('cx', x1 + (x2 - x1) * e);
+          dot.setAttribute('cy', y1 + (y2 - y1) * e);
+        },
+        done: function () {
+          if (dot.parentNode) gOverlay.removeChild(dot);
+          // fade the wire back
+          addTween({
+            start: null, dur: 260, ease: easeOut,
+            update: function (e) { edge.el.setAttribute('opacity', 0.85 - 0.30 * e); },
+            done: function () {
+              edge.el.setAttribute('stroke', origStroke);
+              edge.el.setAttribute('opacity', origOp);
+              resolve();
+            }
+          });
+        }
+      });
+    });
+  }
+
+  // light up a node by activation 0..1
+  function activateNode(node, level) {
+    return new Promise(function (resolve) {
+      node.act = level;
+      // light stage: blend the white node toward blue by activation
+      var target = 0.20 + level * 0.65;
+      var fillTo = mix(NODE_BASE, C.accent, target);
+      if (reduceMotion) {
+        node.el.setAttribute('fill', fillTo);
+        node.el.setAttribute('stroke', C.accent2);
+        node.el.setAttribute('stroke-opacity', 1);
+        node.glow.setAttribute('opacity', 0.0);
+        resolve(); return;
+      }
+      node.el.setAttribute('stroke', C.accent2);
+      node.el.setAttribute('stroke-opacity', 1);
+      addTween({
+        start: null, dur: spd(360), ease: easeOut,
+        update: function (e) {
+          node.el.setAttribute('fill', mix(NODE_BASE, C.accent, target * e));
+          // glow pulse: rise then fall
+          var g = Math.sin(e * Math.PI);
+          node.glow.setAttribute('opacity', 0.45 * g * level);
+          node.glow.setAttribute('r', nodeR + 7 + 5 * g);
+          node.glow.setAttribute('stroke', C.accent);
+        },
+        done: resolve
+      });
+    });
+  }
+
+  // backward glow on a node (error signal arriving) - pink ring
+  function backNode(node) {
+    return new Promise(function (resolve) {
+      if (reduceMotion) {
+        node.el.setAttribute('stroke', C.gap);
+        node.el.setAttribute('stroke-opacity', 1);
+        resolve(); return;
+      }
+      node.el.setAttribute('stroke', C.gap);
+      node.el.setAttribute('stroke-opacity', 1);
+      addTween({
+        start: null, dur: spd(320), ease: easeOut,
+        update: function (e) {
+          var g = Math.sin(e * Math.PI);
+          node.glow.setAttribute('opacity', 0.55 * g);
+          node.glow.setAttribute('r', nodeR + 7 + 6 * g);
+          node.glow.setAttribute('stroke', C.gap);
+        },
+        done: resolve
+      });
+    });
+  }
+
+  // visibly nudge a weight during the backward pass: thickness changes a touch.
+  // The direction per weight is simulated (intuition, not exact gradient math),
+  // so we color the change with the single backward/error color rather than
+  // implying a meaningful per-weight sign.
+  function nudgeWeight(edge) {
+    var sign = Math.random() < 0.5 ? -1 : 1;     // simulated nudge direction
+    var mag = rand(0.04, 0.14);                   // small step
+    var fromW = edge.w;
+    var toW = Math.max(0.12, Math.min(1.0, edge.w + sign * mag));
+    edge.w = toW;
+    return new Promise(function (resolve) {
+      if (reduceMotion) {
+        edge.el.setAttribute('stroke-width', edgeWidth(toW));
+        edge.el.setAttribute('stroke', EDGE_COLOR);
+        edge.el.setAttribute('opacity', EDGE_OP);
+        resolve(); return;
+      }
+      addTween({
+        start: null, dur: spd(420), ease: easeInOut,
+        update: function (e) {
+          edge.el.setAttribute('stroke-width', edgeWidth(fromW + (toW - fromW) * e));
+          edge.el.setAttribute('stroke', C.gap);
+          var g = Math.sin(e * Math.PI);
+          edge.el.setAttribute('opacity', 0.45 + 0.45 * g);
+        },
+        done: function () {
+          edge.el.setAttribute('stroke', EDGE_COLOR);
+          edge.el.setAttribute('opacity', EDGE_OP);
+          resolve();
+        }
+      });
+    });
+  }
+
+  function resetNodeStyles() {
+    for (var L = 0; L < layers.length; L++) {
+      for (var k = 0; k < layers[L].length; k++) {
+        var node = layers[L][k];
+        node.el.setAttribute('fill', NODE_BASE);
+        node.el.setAttribute('stroke', C.ink);
+        node.el.setAttribute('stroke-opacity', 0.5);
+        node.glow.setAttribute('opacity', 0);
+        node.glow.setAttribute('r', nodeR + 7);
+      }
+    }
+  }
+
+  // ----- forward pass -----
+  async function forwardPass() {
+    setPhase('Forward pass: the network makes a guess', 'fwd');
+    resetNodeStyles();
+    // input layer lights immediately
+    var inputs = layers[0].map(function () { return rand(0.4, 1.0); });
+    var pf = [];
+    for (var i = 0; i < layers[0].length; i++) pf.push(activateNode(layers[0][i], inputs[i]));
+    await Promise.all(pf);
+    await delay(120);
+
+    // propagate layer by layer
+    for (var l = 0; l < layers.length - 1; l++) {
+      // pulse all edges from layer l to l+1
+      var edgePromises = [];
+      for (var e = 0; e < edges.length; e++) {
+        if (edges[e].l === l) {
+          edgePromises.push(pulseEdge(edges[e], C.accent, 1, spd(540)));
+        }
+      }
+      await Promise.all(edgePromises);
+      // light next layer
+      var act = [];
+      for (var j = 0; j < layers[l + 1].length; j++) {
+        act.push(activateNode(layers[l + 1][j], rand(0.35, 1.0)));
+      }
+      await Promise.all(act);
+      await delay(90);
+    }
+  }
+
+  // flash the error gap between output[0] and the gold target ring
+  async function showError() {
+    var out = layers[layers.length - 1][0];
+    setPhase('Off by this much: that gap is the error', 'bwd');
+    // pulse the target ring + output node together
+    if (!reduceMotion) {
+      await new Promise(function (resolve) {
+        addTween({
+          start: null, dur: spd(700), ease: easeInOut,
+          update: function (e) {
+            var g = Math.sin(e * Math.PI * 2);
+            out.glow.setAttribute('stroke', C.gold);
+            out.glow.setAttribute('opacity', 0.6 * Math.abs(g));
+            out.glow.setAttribute('r', nodeR + 9 + 4 * g);
+          },
+          done: resolve
+        });
+      });
+    } else {
+      await delay(0);
+    }
+  }
+
+  // ----- backward pass -----
+  async function backwardPass() {
+    setPhase('Backward pass: the error flows back and fixes the weights', 'bwd');
+    // start from output layer going left
+    for (var l = layers.length - 2; l >= 0; l--) {
+      // mark the right-side nodes as receiving error
+      var bn = [];
+      for (var j = 0; j < layers[l + 1].length; j++) bn.push(backNode(layers[l + 1][j]));
+      await Promise.all(bn);
+
+      // pulse error backward along every edge of this layer, then nudge it
+      var promises = [];
+      for (var e = 0; e < edges.length; e++) {
+        if (edges[e].l === l) {
+          promises.push(pulseEdge(edges[e], C.gap, -1, spd(520)));
+        }
+      }
+      await Promise.all(promises);
+
+      // now visibly nudge each weight in this layer
+      var nudges = [];
+      for (var e2 = 0; e2 < edges.length; e2++) {
+        if (edges[e2].l === l) nudges.push(nudgeWeight(edges[e2]));
+      }
+      await Promise.all(nudges);
+      await delay(70);
+    }
+    // left layer flash
+    var bn0 = [];
+    for (var k = 0; k < layers[0].length; k++) bn0.push(backNode(layers[0][k]));
+    await Promise.all(bn0);
+  }
+
+  // ----- one full training step -----
+  async function oneStep() {
+    if (phaseBusy) return;
+    phaseBusy = true;
+    stepBtn.disabled = true;
+    // brisker when training continuously, slow + legible for a single step
+    speed = loopRunning ? 0.5 : 1;
+
+    await forwardPass();
+    await delay(reduceMotion ? 0 : 200);
+    await showError();
+    await delay(reduceMotion ? 0 : 200);
+    await backwardPass();
+
+    // error decreases each step (simulated, asymptotic toward a small floor).
+    // Strictly non-increasing so the chart never shows a false uptick.
+    stepCount += 1;
+    var floor = 0.03;
+    var next = floor + (error - floor) * (0.80 + Math.random() * 0.07);
+    if (next > error) next = error; // never rise
+    if (next < floor) next = floor;
+    error = next;
+    history.push(error);
+    if (history.length > 120) history.shift();
+    updateReadouts();
+    drawChart();
+
+    if (loopRunning) {
+      setPhase('Training: error shrinking', 'fwd');
+    } else {
+      setPhase('Step complete: error is a little smaller', 'done');
+    }
+
+    phaseBusy = false;
+    stepBtn.disabled = false;
+  }
+
+  function updateReadouts() {
+    stepNumEl.textContent = String(stepCount);
+    errValEl.textContent = error.toFixed(3);
+  }
+
+  // ----- error chart -----
+  function drawChart() {
+    while (chart.firstChild) chart.removeChild(chart.firstChild);
+    var cw = 860, ch = 96, pad = 8;
+    // baseline (zero-error reference)
+    var base = el('line', { x1: pad, y1: ch - pad, x2: cw - pad, y2: ch - pad, stroke: C.ink, 'stroke-opacity': 0.25, 'stroke-width': 1 });
+    chart.appendChild(base);
+    // y-axis hints
+    var hi = el('text', { x: pad + 2, y: pad + 9, fill: C.muted, 'font-size': 9, 'font-family': 'inherit' });
+    hi.textContent = 'high error';
+    chart.appendChild(hi);
+    var lo = el('text', { x: pad + 2, y: ch - pad - 4, fill: C.muted, 'font-size': 9, 'font-family': 'inherit' });
+    lo.textContent = 'low error';
+    chart.appendChild(lo);
+    if (history.length < 1) return;
+
+    var maxE = 1.0;
+    var n = history.length;
+    var pts = [];
+    for (var i = 0; i < n; i++) {
+      var x = pad + ((cw - pad * 2) * (n === 1 ? 0 : i / (n - 1)));
+      var y = pad + (ch - pad * 2) * (1 - Math.min(1, history[i] / maxE));
+      pts.push([x, y]);
+    }
+    // area fill
+    var dArea = 'M ' + pts[0][0] + ' ' + (ch - pad);
+    for (var p = 0; p < pts.length; p++) dArea += ' L ' + pts[p][0] + ' ' + pts[p][1];
+    dArea += ' L ' + pts[pts.length - 1][0] + ' ' + (ch - pad) + ' Z';
+    var area = el('path', { d: dArea, fill: C.gap, opacity: 0.12 });
+    chart.appendChild(area);
+    // line
+    var dLine = 'M ' + pts[0][0] + ' ' + pts[0][1];
+    for (var q = 1; q < pts.length; q++) dLine += ' L ' + pts[q][0] + ' ' + pts[q][1];
+    var line = el('path', { d: dLine, fill: 'none', stroke: C.gap, 'stroke-width': 2.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' });
+    chart.appendChild(line);
+    // last point marker
+    var last = pts[pts.length - 1];
+    chart.appendChild(el('circle', { cx: last[0], cy: last[1], r: 3.5, fill: C.gap }));
+  }
+
+  // ----- training loop -----
+  function trainTick() {
+    if (!loopRunning) return;
+    if (phaseBusy) { setTimeout(trainTick, 60); return; }
+    oneStep().then(function () {
+      if (loopRunning) setTimeout(trainTick, reduceMotion ? 250 : 220);
+    });
+  }
+
+  // ----- color mix helper -----
+  function hexToRgb(h) {
+    h = h.replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  function mix(a, b, t) {
+    t = Math.max(0, Math.min(1, t));
+    var ca = hexToRgb(a), cb = hexToRgb(b);
+    var r = Math.round(ca[0] + (cb[0] - ca[0]) * t);
+    var g = Math.round(ca[1] + (cb[1] - ca[1]) * t);
+    var bl = Math.round(ca[2] + (cb[2] - ca[2]) * t);
+    return 'rgb(' + r + ',' + g + ',' + bl + ')';
+  }
+
+  // ----- controls -----
+  stepBtn.addEventListener('click', function () {
+    if (loopRunning) return;
+    oneStep();
+  });
+
+  trainBtn.addEventListener('click', function () {
+    loopRunning = !loopRunning;
+    if (loopRunning) {
+      trainBtn.textContent = 'Stop';
+      trainBtn.classList.add('is-on');
+      stepBtn.disabled = true;
+      trainTick();
+    } else {
+      trainBtn.textContent = 'Train';
+      trainBtn.classList.remove('is-on');
+      stepBtn.disabled = false;
+      setPhase('Paused', null);
+    }
+  });
+
+  resetBtn.addEventListener('click', function () {
+    loopRunning = false;
+    trainBtn.textContent = 'Train';
+    trainBtn.classList.remove('is-on');
+    stepBtn.disabled = false;
+    // cancel tweens
+    if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+    animQueue = [];
+    phaseBusy = false;
+    stepCount = 0;
+    error = 1.0;
+    history = [];
+    buildPositions();
+    drawStatic();
+    resetNodeStyles();
+    updateReadouts();
+    errValEl.textContent = '--';
+    drawChart();
+    setPhase('Ready', null);
+  });
+
+  // clean teardown if the host removes the section
+  function teardown() {
+    loopRunning = false;
+    if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+    animQueue = [];
+  }
+  if (window.MutationObserver) {
+    var mo = new MutationObserver(function () {
+      if (!document.body.contains(root)) { teardown(); mo.disconnect(); }
+    });
+    if (root.parentNode) mo.observe(root.parentNode, { childList: true });
+  }
+  window.addEventListener('pagehide', teardown);
+
+  // ----- init -----
+  buildPositions();
+  drawStatic();
+  updateReadouts();
+  errValEl.textContent = '--';
+  drawChart();
+})();
+</script>
+    </div>
+    <div class="block-foot">
+      <a class="watch" href="https://www.youtube.com/watch?v=Ilg3gGewQ5U" target="_blank" rel="noopener">&#9654; Watch: Backpropagation, intuitively (3Blue1Brown)</a>
+      <a class="drill" href="llm-spaced-repetition.html" target="_blank" rel="noopener">Drill these cards in the study app &rarr;</a>
+    </div>
+  </section>
+  <div class="foot">Self-contained and local. Pair each visual with its video, then drill the matching cards in the <a href="llm-spaced-repetition.html">study app</a>.</div>
+</div>
+</body>
+</html>

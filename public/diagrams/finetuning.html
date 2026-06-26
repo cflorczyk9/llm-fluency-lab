@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="finetuning">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prompt, retrieve, or fine-tune?</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* finetuning-only styles */
+  #ft-goals {
+    gap: 7px;
+  }
+  #ft-axis {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  #ft-axis b {
+    color: var(--accent2);
+    font-weight: 700;
+  }
+  .ft-cards {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ft-card {
+    flex: 1 1 150px;
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 13px 14px 14px;
+    box-shadow: var(--dg-shadow);
+    transition: border-color 0.22s ease, box-shadow 0.22s ease,
+      opacity 0.22s ease, background 0.22s ease;
+  }
+  .ft-card .ft-name {
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--ink);
+    margin: 0 0 2px;
+  }
+  .ft-card .ft-what {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.35;
+    margin: 0 0 9px;
+  }
+  .ft-card .ft-tag {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .ft-state {
+    position: absolute;
+    top: -10px;
+    right: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    padding: 2px 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  /* best fit */
+  .ft-card.is-best {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 14px rgba(28, 29, 31, 0.1);
+  }
+  .ft-card.is-best .ft-state {
+    opacity: 1;
+    background: var(--accent);
+    color: #fff;
+  }
+  .ft-card.is-best .ft-tag {
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+  /* try first */
+  .ft-card.is-try {
+    border-color: var(--gold);
+  }
+  .ft-card.is-try .ft-state {
+    opacity: 1;
+    background: #fff;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+  }
+  /* out */
+  .ft-card.is-out {
+    opacity: 0.42;
+  }
+  .ft-card.is-out .ft-state {
+    opacity: 1;
+    background: var(--panel2);
+    color: var(--muted);
+    border: 1px solid var(--line);
+  }
+  #ft-reason {
+    margin-top: 14px;
+    background: var(--panel2);
+    border: 1px solid var(--line);
+    border-radius: var(--dg-r-md);
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  #ft-reason b {
+    color: var(--accent2);
+    font-weight: 650;
+  }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Fine-tuning &amp; Adaptation</p>
+    <h1 class="dg-title">Prompt, retrieve, or fine-tune?</h1>
+  </div>
+  <p class="dg-caption">
+    Pick a goal. The method that fits lights up, the wrong ones grey out. The
+    whole decision is one split: change what the model <b>knows</b>, or change
+    how it <b>behaves</b>.
+  </p>
+
+  <div class="dg-controls" id="ft-goals" role="group" aria-label="Choose a goal">
+    <span class="dg-label"><b>Goal:</b></span>
+    <button class="dg-btn is-active" type="button" data-g="0" aria-pressed="true">Add today's news</button>
+    <button class="dg-btn" type="button" data-g="1" aria-pressed="false">Answer over private docs</button>
+    <button class="dg-btn" type="button" data-g="2" aria-pressed="false">Cite every claim</button>
+    <button class="dg-btn" type="button" data-g="3" aria-pressed="false">Lock our JSON format</button>
+    <button class="dg-btn" type="button" data-g="4" aria-pressed="false">Adopt our house tone</button>
+    <button class="dg-btn" type="button" data-g="5" aria-pressed="false">A cheap one-off tweak</button>
+  </div>
+
+  <div class="dg-stage">
+    <div id="ft-axis" aria-live="polite">
+      <span>This goal is about:</span> <b id="ft-axis-val">what it should KNOW (a fact that changes)</b>
+    </div>
+
+    <div class="ft-cards">
+      <div class="ft-card" data-m="prompting">
+        <span class="ft-state"></span>
+        <p class="ft-name">Prompting</p>
+        <p class="ft-what">Change the text you feed in right now. Weights untouched.</p>
+        <span class="ft-tag">free, instant, reversible</span>
+      </div>
+      <div class="ft-card" data-m="rag">
+        <span class="ft-state"></span>
+        <p class="ft-name">RAG (retrieval)</p>
+        <p class="ft-what">Change what facts it can see, fetched at question time.</p>
+        <span class="ft-tag">fresh, private, citable</span>
+      </div>
+      <div class="ft-card" data-m="finetune">
+        <span class="ft-state"></span>
+        <p class="ft-name">Fine-tuning</p>
+        <p class="ft-what">Change how it behaves by nudging the weights themselves.</p>
+        <span class="ft-tag">format, tone, narrow task</span>
+      </div>
+    </div>
+
+    <div id="ft-reason" aria-live="polite"></div>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--accent)"></i> best fit</span>
+    <span><i class="dg-swatch is-dot" style="background:#fff;border:1px solid var(--gold)"></i> worth trying first</span>
+    <span><i class="dg-swatch" style="background:var(--panel2);border:1px solid var(--line)"></i> not the tool here</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  // each goal maps the three methods to a state and gives the axis + reason.
+  // states: 'best' (accent), 'try' (gold, try first), 'out' (greyed).
+  var GOALS = [
+    {
+      axis: 'what it should KNOW (a fact that changes)',
+      s: { prompting: 'out', rag: 'best', finetune: 'out' },
+      reason: '<b>RAG.</b> Fresh, changing facts belong in retrieval: fetched at question time, easy to update, and citable. Fine-tuning would bake them into the weights, where they go stale and can be recalled wrong.'
+    },
+    {
+      axis: 'what it should KNOW (a large private corpus)',
+      s: { prompting: 'out', rag: 'best', finetune: 'out' },
+      reason: '<b>RAG.</b> A big private knowledge base is too large to paste and not something to memorize. Retrieval pulls only the relevant chunks per question. Fine-tuning cannot reliably implant documents as facts.'
+    },
+    {
+      axis: 'what it should KNOW (with receipts)',
+      s: { prompting: 'out', rag: 'best', finetune: 'out' },
+      reason: '<b>RAG.</b> Citations come from handing the model real source chunks and pointing back to them. Retrieval supplies those sources; fine-tuning bakes facts in with no source left to cite.'
+    },
+    {
+      axis: 'how it should BEHAVE (output format)',
+      s: { prompting: 'try', rag: 'out', finetune: 'best' },
+      reason: '<b>Fine-tuning.</b> A consistent format is behavior, so it lives in the weights. Try few-shot prompting first (free and instant); if the model keeps slipping, fine-tune to lock it in.'
+    },
+    {
+      axis: 'how it should BEHAVE (tone and style)',
+      s: { prompting: 'try', rag: 'out', finetune: 'best' },
+      reason: '<b>Fine-tuning.</b> Tone and style are behavior. Few-shot prompting often gets you most of the way; fine-tune when you need it consistent every time without a long prompt.'
+    },
+    {
+      axis: 'a quick, cheap, reversible change',
+      s: { prompting: 'best', rag: 'out', finetune: 'out' },
+      reason: '<b>Prompting.</b> Start here. It is free, instant, and reversible, and it often gets you most of fine-tuning\'s benefit with no training run and no model artifact to host.'
+    }
+  ];
+
+  var STATE_LABEL = { best: 'best fit', try: 'try first', out: 'not this' };
+
+  var cards = {};
+  Array.prototype.slice.call(root.querySelectorAll('.ft-card')).forEach(function (c) {
+    cards[c.getAttribute('data-m')] = c;
+  });
+  var btns = Array.prototype.slice.call(root.querySelectorAll('[data-g]'));
+  var axisVal = root.querySelector('#ft-axis-val');
+  var reasonEl = root.querySelector('#ft-reason');
+
+  function applyCard(method, state) {
+    var c = cards[method];
+    if (!c) return;
+    c.classList.remove('is-best', 'is-try', 'is-out');
+    c.classList.add('is-' + state);
+    c.querySelector('.ft-state').textContent = STATE_LABEL[state];
+  }
+
+  function render(gi) {
+    var G = GOALS[gi];
+    applyCard('prompting', G.s.prompting);
+    applyCard('rag', G.s.rag);
+    applyCard('finetune', G.s.finetune);
+    axisVal.textContent = G.axis;
+    reasonEl.innerHTML = G.reason;
+
+    btns.forEach(function (b, k) {
+      var on = k === gi;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  btns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      render(parseInt(b.getAttribute('data-g'), 10));
+    });
+  });
+
+  render(0);
+})();
+</script>
+</body>
+</html>

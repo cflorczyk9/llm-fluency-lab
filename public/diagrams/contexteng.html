@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en" data-diagram-key="contexteng">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The context window is one shared budget</title>
+<link rel="stylesheet" href="diagram.css" />
+<style>
+  /* contexteng-only: the token-budget bar and its eviction readout */
+  #cw-toprow {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  #cw-toprow .dg-slider-wrap { flex: 1 1 240px; }
+  .cw-readout {
+    flex: 0 0 auto;
+    text-align: right;
+    min-width: 130px;
+  }
+  .cw-readout .big {
+    font-size: 19px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .cw-readout .big.is-over { color: var(--gap); }
+  .cw-readout .big.is-fit { color: var(--accent2); }
+  .cw-readout .sub { font-size: 11.5px; color: var(--muted); }
+
+  .cw-rowlabel {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 7px;
+  }
+  .cw-bar {
+    display: flex;
+    width: 100%;
+    height: 50px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--panel2);
+  }
+  .cw-seg {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+    overflow: hidden;
+    padding: 0 4px;
+    text-align: center;
+    color: #fff;
+    border-right: 1px solid rgba(255, 255, 255, 0.28);
+    transition: flex-basis 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .cw-seg:last-child { border-right: 0; }
+  .cw-seg .t {
+    font-weight: 700;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .cw-seg .v {
+    font-size: 10px;
+    opacity: 0.9;
+    font-variant-numeric: tabular-nums;
+  }
+  .cw-seg.is-sys   { background: var(--accent2); }
+  .cw-seg.is-chat  { background: var(--accent); }
+  .cw-seg.is-docs  { background: var(--gold); }
+  .cw-seg.is-query { background: var(--ink); }
+  .cw-seg.is-out {
+    background: var(--panel);
+    color: var(--muted);
+    border-left: 1px dashed var(--gold);
+    border-right-color: var(--line);
+  }
+  .cw-seg.is-free {
+    background: var(--panel2);
+    color: var(--muted);
+    border-right-color: var(--line);
+  }
+  .cw-seg.is-hover { outline: 2px solid var(--ink); outline-offset: -2px; }
+
+  .cw-dropped {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 26px;
+  }
+  .cw-drop-lab { font-size: 11.5px; color: var(--muted); }
+  .cw-drop-chip {
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px dashed var(--gap);
+    color: var(--gap);
+    background: #fff;
+    text-decoration: line-through;
+  }
+  .cw-note {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 0;
+  }
+  .cw-note b { color: var(--ink); font-weight: 600; }
+  .cw-note.is-over b { color: var(--gap); }
+</style>
+</head>
+<body>
+<div class="diagram-root">
+  <div>
+    <p class="dg-kicker">Context windows</p>
+    <h1 class="dg-title">One shared budget, and what falls off the edge</h1>
+  </div>
+  <p class="dg-caption">
+    The system prompt, the chat history, retrieved documents, your question, and
+    the model's reply all share <b>one fixed token budget</b>. Shrink the window
+    and watch what gets evicted: the oldest chat turns go first, then the
+    document is trimmed. Drag the slider.
+  </p>
+
+  <div id="cw-toprow">
+    <div class="dg-slider-wrap">
+      <label class="dg-slider-lab" for="cw-slider">
+        <span>Window size</span><b><span id="cw-winval">64</span>k tokens</b>
+      </label>
+      <input class="dg-slider" id="cw-slider" type="range"
+        min="16" max="200" step="4" value="64"
+        aria-label="Context window size in thousands of tokens" />
+    </div>
+    <div class="cw-readout" aria-hidden="true">
+      <div class="big" id="cw-stat">overflow</div>
+      <div class="sub" id="cw-statsub">content needs 89k</div>
+    </div>
+  </div>
+
+  <div class="dg-stage">
+    <div class="cw-rowlabel">
+      <span>what is in the window</span>
+      <span>reply &rarr;</span>
+    </div>
+    <div class="cw-bar" id="cw-bar" role="img"
+      aria-label="Context window filled with system prompt, chat history, documents, the query, and reserved space for the reply">
+      <!-- segments rendered by JS; static skeleton below is a no-JS fallback -->
+      <div class="cw-seg is-sys"   style="flex:0 0 4%"><span class="t">sys</span></div>
+      <div class="cw-seg is-chat"  style="flex:0 0 6%"><span class="t">chat</span></div>
+      <div class="cw-seg is-docs"  style="flex:0 0 64%"><span class="t">documents</span></div>
+      <div class="cw-seg is-query" style="flex:0 0 2%"><span class="t">q</span></div>
+      <div class="cw-seg is-out"   style="flex:0 0 12%"><span class="t">reply room</span></div>
+      <div class="cw-seg is-free"  style="flex:1 1 12%"><span class="t">free</span></div>
+    </div>
+
+    <div style="height:13px"></div>
+    <div class="cw-dropped" id="cw-dropped" aria-live="polite">
+      <span class="cw-drop-lab">Dropped to fit:</span>
+    </div>
+    <p class="cw-note" id="cw-note">&nbsp;</p>
+  </div>
+
+  <div class="dg-legend">
+    <span><i class="dg-swatch" style="background:var(--accent2)"></i> system prompt (pinned)</span>
+    <span><i class="dg-swatch" style="background:var(--accent)"></i> chat history (evicted first)</span>
+    <span><i class="dg-swatch" style="background:var(--gold)"></i> retrieved docs</span>
+    <span><i class="dg-swatch" style="background:var(--ink)"></i> your query (pinned)</span>
+    <span><i class="dg-swatch" style="background:#fff;border:1px dashed var(--gold)"></i> reserved for reply</span>
+  </div>
+</div>
+
+<script src="diagram.js"></script>
+<script>
+(function () {
+  'use strict';
+  var root = document.querySelector('.diagram-root');
+  if (!root) return;
+
+  // Fixed content demand (thousands of tokens). These compete for the window.
+  var SYS = 2, CHAT = 28, DOCS = 50, QUERY = 1, OUT = 8;
+  var TOTAL = SYS + CHAT + DOCS + QUERY + OUT; // 89k of demand
+
+  var bar = root.querySelector('#cw-bar');
+  var slider = root.querySelector('#cw-slider');
+  var winval = root.querySelector('#cw-winval');
+  var statEl = root.querySelector('#cw-stat');
+  var statSub = root.querySelector('#cw-statsub');
+  var dropped = root.querySelector('#cw-dropped');
+  var note = root.querySelector('#cw-note');
+
+  // Build a labeled segment. label is the visible name, tip the hover detail.
+  function seg(cls, tokens, win, label, tip) {
+    var pct = Math.max(0, (tokens / win) * 100);
+    var el = document.createElement('div');
+    el.className = 'cw-seg ' + cls;
+    el.style.flex = '0 0 ' + pct.toFixed(2) + '%';
+    if (tokens > 0 && pct >= 7) {
+      el.innerHTML = '<span class="t">' + label + '</span>' +
+        '<span class="v">' + tokens + 'k</span>';
+    } else if (tokens > 0) {
+      el.innerHTML = '<span class="t">' + label + '</span>';
+    }
+    el.title = tip;
+    return el;
+  }
+
+  function render(win) {
+    winval.textContent = win;
+
+    // Output room is always reserved; the system prompt and query are pinned.
+    var evictAvail = win - SYS - QUERY - OUT;
+    var demand = CHAT + DOCS;
+    var overflow = Math.max(0, demand - evictAvail);
+
+    // Truncation order: drop the OLDEST chat turns first, then trim the doc.
+    var dropChat = Math.min(CHAT, overflow);
+    var dropDocs = Math.min(DOCS, overflow - dropChat);
+    var chatKept = CHAT - dropChat;
+    var docsKept = DOCS - dropDocs;
+
+    var used = SYS + chatKept + docsKept + QUERY + OUT;
+    var free = Math.max(0, win - used);
+    var totalDropped = dropChat + dropDocs;
+
+    // ---- bar ----
+    bar.innerHTML = '';
+    bar.appendChild(seg('is-sys', SYS, win, 'sys',
+      'System prompt: pinned instructions, always kept.'));
+    if (chatKept > 0) {
+      bar.appendChild(seg('is-chat', chatKept, win, 'chat',
+        'Chat history that survived. Oldest turns are evicted first.'));
+    }
+    if (docsKept > 0) {
+      bar.appendChild(seg('is-docs', docsKept, win, 'documents',
+        'Retrieved documents. Trimmed from the start once chat is gone.'));
+    }
+    bar.appendChild(seg('is-query', QUERY, win, 'q',
+      'Your question: pinned, never dropped.'));
+    bar.appendChild(seg('is-out', OUT, win, 'reply room',
+      'Headroom reserved so the model has space to write its answer.'));
+    if (free > 0.3) {
+      var f = seg('is-free', free, win, 'free',
+        'Unused budget. Room to spare in this window.');
+      f.style.flex = '1 1 ' + ((free / win) * 100).toFixed(2) + '%';
+      bar.appendChild(f);
+    }
+
+    // hover highlight wiring (light interaction on top of the slider)
+    Array.prototype.forEach.call(bar.children, function (c) {
+      c.addEventListener('mouseenter', function () { c.classList.add('is-hover'); });
+      c.addEventListener('mouseleave', function () { c.classList.remove('is-hover'); });
+    });
+
+    // ---- readout ----
+    if (totalDropped > 0) {
+      statEl.textContent = 'overflow';
+      statEl.className = 'big is-over';
+      statSub.textContent = totalDropped + 'k cut from ' + TOTAL + 'k';
+    } else {
+      statEl.textContent = 'it fits';
+      statEl.className = 'big is-fit';
+      statSub.textContent = free + 'k headroom to spare';
+    }
+
+    // ---- dropped chips ----
+    dropped.innerHTML = '<span class="cw-drop-lab">Dropped to fit:</span>';
+    if (dropChat > 0) {
+      var c1 = document.createElement('span');
+      c1.className = 'cw-drop-chip';
+      c1.textContent = 'chat history ' + dropChat + 'k';
+      dropped.appendChild(c1);
+    }
+    if (dropDocs > 0) {
+      var c2 = document.createElement('span');
+      c2.className = 'cw-drop-chip';
+      c2.textContent = 'document ' + dropDocs + 'k';
+      dropped.appendChild(c2);
+    }
+    if (totalDropped === 0) {
+      var ok = document.createElement('span');
+      ok.className = 'cw-drop-lab';
+      ok.style.color = 'var(--accent2)';
+      ok.textContent = 'nothing, the whole input fit.';
+      dropped.appendChild(ok);
+    }
+
+    // ---- note ----
+    if (totalDropped > 0) {
+      note.className = 'cw-note is-over';
+      note.innerHTML = '<b>Silent truncation.</b> The model answers from only ' +
+        'what survived, with no warning that ' + totalDropped +
+        'k fell off the edge.';
+    } else {
+      note.className = 'cw-note';
+      note.innerHTML = 'Everything is on the desk at once. <b>A bigger window ' +
+        'still costs more per token and is read unevenly,</b> so curating what ' +
+        'goes in keeps mattering.';
+    }
+
+    if (window.reportDiagramHeight) window.reportDiagramHeight();
+  }
+
+  slider.addEventListener('input', function () {
+    render(parseInt(slider.value, 10));
+  });
+  render(parseInt(slider.value, 10));
+})();
+</script>
+</body>
+</html>
