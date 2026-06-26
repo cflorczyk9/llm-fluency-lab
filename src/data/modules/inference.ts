@@ -23,6 +23,36 @@ const mod: Category = {
   breakdown: [
     {
       heading: 'How a model picks the next token: greedy vs sampling',
+      video: { url: "https://www.youtube.com/watch?v=o-_SZ_itxeA", title: "Greedy? Min-p? Beam Search? How LLMs Actually Pick Words – Decoding Strategies Explained", channel: "AI Coffee Break with Letitia" },
+      caption:
+        'Every step the model ranks all possible next tokens. Greedy keeps the top bar every time, sampling rolls a weighted die so lower bars can still win.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="inf1-t">
+  <title id="inf1-t">Greedy decoding takes the tallest probability bar, sampling draws from the whole set</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .mut{fill:#6b7280;font-size:10px}.tag{font-size:13px;font-weight:600}.lbl{font-size:11px}
+  </style>
+  <text class="mut" x="22" y="20">Next-token probabilities</text>
+  <g stroke="#d6cdb5" stroke-width="1">
+    <rect x="26" y="68" width="22" height="86" fill="#2f8cff"/>
+    <rect x="56" y="104" width="22" height="50" fill="#efe9da"/>
+    <rect x="86" y="124" width="22" height="30" fill="#efe9da"/>
+    <rect x="116" y="132" width="22" height="22" fill="#efe9da"/>
+    <rect x="146" y="140" width="22" height="14" fill="#efe9da"/>
+  </g>
+  <line x1="22" y1="154" x2="174" y2="154" stroke="#e6dfce" stroke-width="1.5"/>
+  <g class="mut" text-anchor="middle">
+    <text x="37" y="167">cat</text><text x="67" y="167">sat</text><text x="97" y="167">ran</text><text x="127" y="167">sky</text><text x="157" y="167">the</text>
+  </g>
+  <text class="tag" x="212" y="56" fill="#0b5394">Greedy</text>
+  <text class="lbl" x="212" y="72" fill="#6b7280">always the tallest bar</text>
+  <path d="M208 60 C150 60 110 64 50 70" fill="none" stroke="#0b5394" stroke-width="1.6" marker-end="url(#inf1-a)"/>
+  <text class="tag" x="212" y="120" fill="#1f7a50">Sampling</text>
+  <text class="lbl" x="212" y="136" fill="#6b7280">weighted random pick</text>
+  <rect x="304" y="104" width="32" height="32" rx="6" fill="#fff" stroke="#1f7a50" stroke-width="1.4"/>
+  <g fill="#1f7a50"><circle cx="312" cy="112" r="2.3"/><circle cx="320" cy="120" r="2.3"/><circle cx="328" cy="128" r="2.3"/></g>
+  <defs><marker id="inf1-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#0b5394"/></marker></defs>
+</svg>`,
       explanation:
         "A language model does not output text directly. At each step it produces a probability for every token in its vocabulary (a long list of numbers that sum to 1), and decoding is the rule for turning that list into one chosen token. The two ends of the spectrum are greedy decoding (always take the single highest-probability token) and sampling (roll a weighted die where higher-probability tokens are more likely but not guaranteed). Greedy is deterministic and repeatable but tends to produce flat, repetitive text and can get stuck in loops. Sampling introduces controlled randomness, which is why the same prompt can give different answers and why creative tasks feel more natural. Every other knob (temperature, top-p, top-k) is just a way to shape that probability list before the die is rolled.",
       keyTerms: [
@@ -50,6 +80,40 @@ const mod: Category = {
     },
     {
       heading: 'The shaping knobs: temperature, top-k, and top-p',
+      video: { url: "https://www.youtube.com/watch?v=MkaazQttbpc", title: "The Secret Controls for your LLM: Temperature, Top-K, Top-P, etc", channel: "Gary Explains" },
+      caption:
+        'Temperature sharpens or flattens the odds. Top-k keeps a fixed number of top tokens, top-p keeps the smallest group that adds up to about ninety percent.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="inf2-t">
+  <title id="inf2-t">Three knobs reshape the candidate tokens before sampling</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .h{font-size:11px;font-weight:600}.mut{fill:#6b7280;font-size:9.5px}
+  </style>
+  <text class="h" x="14" y="22" fill="#d97706">Temperature</text>
+  <line x1="16" y1="120" x2="112" y2="120" stroke="#e6dfce" stroke-width="1.5"/>
+  <path d="M18 120 Q64 46 110 120" fill="none" stroke="#0b5394" stroke-width="2"/>
+  <path d="M18 120 Q64 98 110 120" fill="none" stroke="#d97706" stroke-width="2" stroke-dasharray="4 3"/>
+  <text class="mut" x="40" y="72" fill="#0b5394">low: sharp</text>
+  <text class="mut" x="46" y="112" fill="#d97706">high: flat</text>
+  <text class="h" x="132" y="22" fill="#0b5394">Top-k</text>
+  <line x1="132" y1="120" x2="203" y2="120" stroke="#e6dfce" stroke-width="1.5"/>
+  <rect x="132" y="58" width="11" height="62" fill="#cfe0f7" stroke="#0b5394"/>
+  <rect x="147" y="74" width="11" height="46" fill="#cfe0f7" stroke="#0b5394"/>
+  <rect x="162" y="86" width="11" height="34" fill="#cfe0f7" stroke="#0b5394"/>
+  <rect x="177" y="98" width="11" height="22" fill="#efe9da" stroke="#d6cdb5"/>
+  <rect x="192" y="106" width="11" height="14" fill="#efe9da" stroke="#d6cdb5"/>
+  <line x1="175" y1="50" x2="175" y2="126" stroke="#0b5394" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <text class="mut" x="132" y="138">keep top 3</text>
+  <text class="h" x="250" y="22" fill="#1f7a50">Top-p</text>
+  <line x1="250" y1="120" x2="321" y2="120" stroke="#e6dfce" stroke-width="1.5"/>
+  <rect x="250" y="58" width="11" height="62" fill="#cfe9d9" stroke="#1f7a50"/>
+  <rect x="265" y="74" width="11" height="46" fill="#cfe9d9" stroke="#1f7a50"/>
+  <rect x="280" y="86" width="11" height="34" fill="#cfe9d9" stroke="#1f7a50"/>
+  <rect x="295" y="98" width="11" height="22" fill="#cfe9d9" stroke="#1f7a50"/>
+  <rect x="310" y="106" width="11" height="14" fill="#efe9da" stroke="#d6cdb5"/>
+  <line x1="308" y1="50" x2="308" y2="126" stroke="#1f7a50" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <text class="mut" x="250" y="138">keep about 90%</text>
+</svg>`,
       explanation:
         "These three settings decide how adventurous the sampling is. Temperature rescales the probabilities before sampling: a low temperature (near 0) sharpens the distribution so the top token dominates (behaving almost like greedy), while a high temperature (above 1) flattens it so unlikely tokens get a real shot, which raises both creativity and the risk of nonsense. Top-k and top-p instead truncate the list of candidates: top-k keeps only the k most likely tokens and discards the rest, while top-p (also called nucleus sampling) keeps the smallest set of top tokens whose probabilities add up to at least p (for example 0.9), then samples among those. Top-p is usually preferred over top-k because it adapts: when the model is confident, the nucleus is tiny, and when it is uncertain, the nucleus widens automatically. In practice you tune temperature and top-p together; setting temperature to 0 makes output effectively deterministic regardless of the others.",
       keyTerms: [
@@ -72,6 +136,43 @@ const mod: Category = {
     },
     {
       heading: 'Beam search and why chat models rarely use it',
+      video: { url: "https://www.youtube.com/watch?v=wltqDbhlcJ0", title: "Beam Search (Natural Language Processing at UT Austin)", channel: "Greg Durrett" },
+      caption:
+        'Beam search explores several candidate sequences at once and keeps only the top scorers, pruning the rest. Chat models skip it because the safest whole sentence is often the dullest.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="inf3-t">
+  <title id="inf3-t">Beam search keeps the best few partial sequences and prunes the rest</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .mut{fill:#6b7280;font-size:10px}.h{font-size:11px;font-weight:600}
+  </style>
+  <text class="h" x="20" y="18">Beam width 2: keep the best 2 at each step</text>
+  <g stroke-width="1.4" fill="none">
+    <path d="M56 100 L128 50" stroke="#e6dfce"/>
+    <path d="M56 100 L128 86" stroke="#0b5394"/>
+    <path d="M56 100 L128 122" stroke="#0b5394"/>
+    <path d="M56 100 L128 160" stroke="#e6dfce"/>
+    <path d="M152 86 L228 58" stroke="#e6dfce"/>
+    <path d="M152 86 L228 92" stroke="#1f7a50"/>
+    <path d="M152 122 L228 120" stroke="#1f7a50"/>
+    <path d="M152 122 L228 152" stroke="#e6dfce"/>
+  </g>
+  <circle cx="44" cy="100" r="12" fill="#fff" stroke="#1c1d1f" stroke-width="1.6"/>
+  <circle cx="140" cy="50" r="12" fill="#efe9da" stroke="#d6cdb5"/>
+  <circle cx="140" cy="86" r="12" fill="#cfe0f7" stroke="#0b5394" stroke-width="1.6"/>
+  <circle cx="140" cy="122" r="12" fill="#cfe0f7" stroke="#0b5394" stroke-width="1.6"/>
+  <circle cx="140" cy="160" r="12" fill="#efe9da" stroke="#d6cdb5"/>
+  <circle cx="240" cy="58" r="12" fill="#efe9da" stroke="#d6cdb5"/>
+  <circle cx="240" cy="92" r="12" fill="#cfe9d9" stroke="#1f7a50" stroke-width="1.6"/>
+  <circle cx="240" cy="120" r="12" fill="#cfe9d9" stroke="#1f7a50" stroke-width="1.6"/>
+  <circle cx="240" cy="152" r="12" fill="#efe9da" stroke="#d6cdb5"/>
+  <g stroke="#dc2626" stroke-width="1.6">
+    <path d="M135 45 l10 10 M145 45 l-10 10"/>
+    <path d="M135 155 l10 10 M145 155 l-10 10"/>
+    <path d="M235 53 l10 10 M245 53 l-10 10"/>
+    <path d="M235 147 l10 10 M245 147 l-10 10"/>
+  </g>
+  <text class="mut" x="120" y="190"><tspan fill="#0b5394">kept</tspan>  vs  <tspan fill="#dc2626">pruned</tspan></text>
+</svg>`,
       explanation:
         'Beam search is a decoding strategy that tries to find a high-probability whole sequence rather than just greedily picking each token. It keeps several candidate sequences alive at once (the beam width, say 4), extends each by one token, scores the partial sequences, and prunes back to the best few, repeating until done. This often produces more globally optimal text and is genuinely useful for tasks with one clearly correct answer, like machine translation or speech transcription. But for open-ended chat and creative generation it tends to produce bland, repetitive, generic text (the highest-probability sequence is often the most boring one), and it costs more compute because you are running multiple candidates in parallel. That is why modern chat assistants overwhelmingly use temperature-based sampling with top-p instead of beam search.',
       keyTerms: [
@@ -89,6 +190,40 @@ const mod: Category = {
     },
     {
       heading: 'The KV cache: why generation gets faster after the first token',
+      video: { url: "https://www.youtube.com/watch?v=7OrMFn86PlM", title: "KV Cache in LLMs Explained Visually | How LLMs Generate Tokens Faster", channel: "ExplainingAI" },
+      caption:
+        'The first chunk is slow because the model digests the whole prompt and fills a cache. After that each new token only does its own work and reuses the cache, so words stream out fast.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="inf4-t">
+  <title id="inf4-t">Prefill reads the whole prompt once, then each new token reuses the saved cache</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .mut{fill:#6b7280;font-size:10px}.lbl{font-size:11px}.b{font-size:11px;font-weight:600}
+  </style>
+  <text class="mut" x="16" y="20">time</text>
+  <line x1="40" y1="16" x2="344" y2="16" stroke="#e6dfce" stroke-width="1.4" marker-end="url(#inf4-a)"/>
+  <rect x="16" y="40" width="118" height="40" rx="6" fill="#cfe0f7" stroke="#0b5394" stroke-width="1.4"/>
+  <text class="b" x="34" y="58" fill="#0b5394">Prefill</text>
+  <text class="mut" x="22" y="72">reads prompt: slow</text>
+  <text class="mut" x="150" y="34">decode: fast</text>
+  <rect x="150" y="44" width="30" height="30" rx="4" fill="#cfe9d9" stroke="#1f7a50" stroke-width="1.3"/>
+  <rect x="188" y="44" width="30" height="30" rx="4" fill="#cfe9d9" stroke="#1f7a50" stroke-width="1.3"/>
+  <rect x="226" y="44" width="30" height="30" rx="4" fill="#cfe9d9" stroke="#1f7a50" stroke-width="1.3"/>
+  <rect x="264" y="44" width="30" height="30" rx="4" fill="#cfe9d9" stroke="#1f7a50" stroke-width="1.3"/>
+  <g class="mut" text-anchor="middle">
+    <text x="165" y="63">t1</text><text x="203" y="63">t2</text><text x="241" y="63">t3</text><text x="279" y="63">t4</text>
+  </g>
+  <rect x="16" y="120" width="320" height="38" rx="6" fill="#fff" stroke="#e6dfce" stroke-width="1.4"/>
+  <text class="lbl" x="28" y="144">KV cache: saved keys and values for every earlier token</text>
+  <path d="M75 80 L75 118" fill="none" stroke="#0b5394" stroke-width="1.5" marker-end="url(#inf4-b)"/>
+  <text class="mut" x="80" y="102" fill="#0b5394">fills</text>
+  <path d="M165 118 L165 76" fill="none" stroke="#1f7a50" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#inf4-c)"/>
+  <text class="mut" x="170" y="100" fill="#1f7a50">reuse</text>
+  <defs>
+    <marker id="inf4-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#9aa0aa"/></marker>
+    <marker id="inf4-b" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#0b5394"/></marker>
+    <marker id="inf4-c" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#1f7a50"/></marker>
+  </defs>
+</svg>`,
       explanation:
         "When a model generates token by token, each new token's attention needs to look back at every previous token. Without help, the model would re-compute the internal representations (the keys and values used by attention) for the entire sequence at every single step, which is hugely wasteful. The KV cache stores those keys and values for all earlier tokens so each new step only computes the math for the one new token and reuses the rest. This is why the first response chunk (processing your whole prompt, the prefill) can lag while subsequent tokens stream out quickly (decode). The catch: the cache grows with sequence length and lives in GPU memory, so long contexts and many simultaneous users consume a lot of memory, which is a major driver of cost and of how many requests a server can handle at once.",
       keyTerms: [
@@ -111,6 +246,30 @@ const mod: Category = {
     },
     {
       heading: 'Context windows, latency vs throughput, and what breaks past the limit',
+      video: { url: "https://www.youtube.com/watch?v=-QVoIxEpFkM", title: "What is a Context Window? Unlocking LLM Secrets", channel: "IBM Technology" },
+      caption:
+        'Input and output share one fixed token budget. The model leans on the start and end, and anything past the limit gets cut off.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="inf5-t">
+  <title id="inf5-t">One fixed token budget holds prompt plus output, and tokens past the limit drop off</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .mut{fill:#6b7280;font-size:10px}.lbl{font-size:11px}
+  </style>
+  <path d="M28 50 Q176 92 320 50" fill="none" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <text class="mut" x="24" y="40">attention: strong at the ends</text>
+  <text class="mut" x="150" y="86">weak middle</text>
+  <rect x="24" y="100" width="300" height="40" rx="6" fill="#fff" stroke="#1c1d1f" stroke-width="1.6"/>
+  <rect x="26" y="102" width="176" height="36" fill="#cfe0f7"/>
+  <rect x="202" y="102" width="120" height="36" fill="#cfe9d9"/>
+  <line x1="202" y1="102" x2="202" y2="138" stroke="#fff" stroke-width="1.4"/>
+  <text class="lbl" x="60" y="125" fill="#0b5394">prompt</text>
+  <text class="lbl" x="232" y="125" fill="#1f7a50">output</text>
+  <line x1="324" y1="92" x2="324" y2="150" stroke="#dc2626" stroke-width="2"/>
+  <text class="mut" x="322" y="164" text-anchor="middle" fill="#dc2626">limit</text>
+  <rect x="332" y="104" width="14" height="14" rx="2" fill="#f3c9c9" stroke="#dc2626"/>
+  <rect x="332" y="124" width="14" height="14" rx="2" fill="#f3c9c9" stroke="#dc2626" opacity="0.6"/>
+  <text class="mut" x="352" y="156" text-anchor="end" fill="#dc2626">dropped</text>
+</svg>`,
       explanation:
         'The context window is the maximum number of tokens (prompt plus generated output) the model can attend to at once, set by how it was trained. Two performance ideas often get confused: latency is how fast one request feels (time-to-first-token and per-token speed for a single user), while throughput is total tokens served per second across all users. They trade off: batching many requests together raises throughput and hardware efficiency but can add latency for any one user. As you fill the context window, two things degrade before you hit the hard limit. First, cost and latency rise roughly with length because attention work and the KV cache grow with the number of tokens. Second, quality can sag in the middle of very long inputs (the lost-in-the-middle effect), where models attend best to the beginning and end. Past the hard limit the request errors out or older tokens get truncated/dropped, so the model literally stops seeing the start of the conversation.',
       keyTerms: [

@@ -4,6 +4,7 @@ import type { Category, CardState } from '../../types';
 import { useStore } from '../../store/store';
 import { emptyState } from '../../lib/fsrs';
 import { cardFluency, categoryFluency } from '../../lib/fluency';
+import ConceptTile from './ConceptTile';
 import {
   buildComprehension,
   fluColor,
@@ -30,6 +31,10 @@ export default function CategoryRow({ category, step }: CategoryRowProps) {
   const [peekOpen, setPeekOpen] = useState(false);
   const [openChecks, setOpenChecks] = useState<Set<string>>(new Set());
   const [openCards, setOpenCards] = useState<Set<string>>(new Set());
+  // Index of the one concept whose full-width detail is open, or null. Lifted
+  // here (not per tile) so only one detail panel is ever expanded at a time,
+  // keeping the "See how it works" grid calm.
+  const [openConcept, setOpenConcept] = useState<number | null>(null);
 
   // Self-contained interactive diagram embedded per module. The diagram lives in
   // /public/diagrams/<key>.html and posts its measured height back to us so the
@@ -75,6 +80,7 @@ export default function CategoryRow({ category, step }: CategoryRowProps) {
   function toggleOpen() {
     const next = !open;
     setOpen(next);
+    if (!next) setOpenConcept(null); // start clean next time the module opens
     if (next && !started) startLesson(category.key);
   }
 
@@ -138,18 +144,6 @@ export default function CategoryRow({ category, step }: CategoryRowProps) {
             </div>
           )}
 
-          {/* See it: a self-contained interactive diagram for this module */}
-          <div className="step-h">See it</div>
-          <div className="module-diagram">
-            <iframe
-              ref={diagramRef}
-              src={`/diagrams/${category.key}.html`}
-              title={`${category.name} diagram`}
-              loading="lazy"
-              style={{ height: `${diagramHeight}px` }}
-            />
-          </div>
-
           {/* Step 1: watch (only modules with a real video) */}
           {category.video && (
             <>
@@ -172,23 +166,30 @@ export default function CategoryRow({ category, step }: CategoryRowProps) {
             </>
           )}
 
-          {/* Step 2: read the breakdown */}
-          <div className="step-h">Read the breakdown</div>
-          {category.breakdown.map((section, i) => (
-            <div className="bd" key={`${category.key}-bd-${i}`}>
-              <h4>{section.heading}</h4>
-              <p>{section.explanation}</p>
-              {section.keyTerms.length > 0 && (
-                <div className="glossary">
-                  {section.keyTerms.map((t) => (
-                    <div className="term" key={t.term}>
-                      <b>{t.term}</b>: {t.definition}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+          {/* Step 2: see how it works. Lead with the interactive diagram as the
+              hero, then a full-width grid of per-concept visual tiles. */}
+          <div className="step-h">See how it works</div>
+          <div className="module-diagram module-diagram-hero">
+            <iframe
+              ref={diagramRef}
+              src={`/diagrams/${category.key}.html`}
+              title={`${category.name} diagram`}
+              loading="lazy"
+              style={{ height: `${diagramHeight}px` }}
+            />
+          </div>
+          <div className="concept-grid">
+            {category.breakdown.map((section, i) => (
+              <ConceptTile
+                section={section}
+                key={`${category.key}-bd-${i}`}
+                expanded={openConcept === i}
+                onToggle={() =>
+                  setOpenConcept((cur) => (cur === i ? null : i))
+                }
+              />
+            ))}
+          </div>
 
           {/* Step 3: check yourself (elaborative prompts) */}
           {checks.length > 0 && (

@@ -17,6 +17,34 @@ const mod: Category = {
   breakdown: [
     {
       heading: 'Designing around non-determinism',
+      video: { url: "https://www.youtube.com/watch?v=YMIQrH9BQK0", title: "Temperature, Top-K & Top-P Explained in 10 Minutes | LLM Sampling Made Simple", channel: "bababoss" },
+      caption:
+        'The same prompt can come back worded differently each time. You design for any answer that lands inside a valid shape, range, or category, not one exact string.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rel1-t">
+  <title id="rel1-t">One prompt yields several different but valid answers inside an acceptable envelope</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .mut{fill:#6b7280;font-size:10px}.tag{font-size:13px;font-weight:600}.lbl{font-size:11px}
+  </style>
+  <rect x="12" y="80" width="70" height="40" rx="6" fill="#fff" stroke="#d6cdb5" stroke-width="1.4"/>
+  <text class="lbl" x="47" y="96" text-anchor="middle">Same</text>
+  <text class="lbl" x="47" y="110" text-anchor="middle">prompt</text>
+  <path d="M84 100 L114 100" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#rel1-a)"/>
+  <rect x="116" y="82" width="50" height="36" rx="6" fill="#2f8cff" stroke="#0b5394" stroke-width="1.4"/>
+  <text class="lbl" x="141" y="104" text-anchor="middle" fill="#fff">model</text>
+  <text class="mut" x="141" y="132" text-anchor="middle">temperature = spread</text>
+  <path d="M168 100 L196 100" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#rel1-a)"/>
+  <text class="mut" x="200" y="44" fill="#1f7a50">Acceptable envelope</text>
+  <rect x="198" y="50" width="152" height="104" rx="8" fill="none" stroke="#1f7a50" stroke-width="1.4" stroke-dasharray="5 4"/>
+  <rect x="208" y="60" width="132" height="24" rx="5" fill="#fff" stroke="#d6cdb5" stroke-width="1.2"/>
+  <text class="lbl" x="216" y="76">'total is 42'</text>
+  <rect x="208" y="90" width="132" height="24" rx="5" fill="#fff" stroke="#d6cdb5" stroke-width="1.2"/>
+  <text class="lbl" x="216" y="106">'comes to 42'</text>
+  <rect x="208" y="120" width="132" height="24" rx="5" fill="#fff" stroke="#d6cdb5" stroke-width="1.2"/>
+  <text class="lbl" x="216" y="136">'sums to 42'</text>
+  <text class="mut" x="274" y="170" text-anchor="middle">valid shape · range · category</text>
+  <defs><marker id="rel1-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#6b7280"/></marker></defs>
+</svg>`,
       explanation:
         "A traditional program given the same input returns the same output every time. A language model does not: ask it the same question twice and you can get two differently worded answers. The main reason is sampling, where the model picks its next token with controlled randomness governed by a temperature setting. Turning temperature to zero makes it choose the single most likely token each time and gets you close to repeatable, but even then small hardware and batching effects can cause occasional variation, so you should never assume exact determinism. The practical mindset shift is to stop expecting one fixed string and instead design for a distribution of acceptable answers. That means defining what a correct answer looks like (a valid JSON shape, a number in a range, a category from a fixed list) rather than pinning the exact words, and building the surrounding system to check and recover when an answer falls outside that envelope.",
       keyTerms: [
@@ -39,6 +67,43 @@ const mod: Category = {
     },
     {
       heading: 'Validating inputs and outputs',
+      video: { url: "https://www.youtube.com/watch?v=mIZHRqMoJec", title: "Structured Outputs - How to Specify a JSON schema for your LLM Outputs", channel: "VectorLab" },
+      caption:
+        'Every model call is wrapped in checks. Input is screened before it reaches the model and output is validated before anything downstream uses it, with a retry or fallback when a check fails.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rel2-t">
+  <title id="rel2-t">Input validation and output validation guard both sides of the model</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .mut{fill:#6b7280;font-size:10px}.tag{font-size:13px;font-weight:600}.lbl{font-size:11px}
+  </style>
+  <text class="mut" x="14" y="24">Checks on both sides of the model</text>
+  <rect x="6" y="42" width="52" height="32" rx="6" fill="#fff" stroke="#d6cdb5" stroke-width="1.4"/>
+  <text class="lbl" x="32" y="62" text-anchor="middle">input</text>
+  <path d="M58 58 L70 58" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#rel2-a)"/>
+  <rect x="70" y="38" width="60" height="40" rx="6" fill="#fff" stroke="#1f7a50" stroke-width="1.4"/>
+  <text class="lbl" x="100" y="54" text-anchor="middle">Validate</text>
+  <text class="lbl" x="100" y="68" text-anchor="middle">+ screen</text>
+  <text class="mut" x="100" y="92" text-anchor="middle">injection screen</text>
+  <path d="M130 58 L144 58" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#rel2-a)"/>
+  <rect x="144" y="42" width="46" height="32" rx="6" fill="#2f8cff" stroke="#0b5394" stroke-width="1.4"/>
+  <text class="lbl" x="167" y="62" text-anchor="middle" fill="#fff">model</text>
+  <path d="M190 58 L204 58" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#rel2-a)"/>
+  <rect x="204" y="38" width="62" height="40" rx="6" fill="#fff" stroke="#1f7a50" stroke-width="1.4"/>
+  <text class="lbl" x="235" y="54" text-anchor="middle">Check</text>
+  <text class="lbl" x="235" y="68" text-anchor="middle">structure</text>
+  <text class="mut" x="235" y="92" text-anchor="middle">schema / JSON</text>
+  <path d="M266 58 L280 58" fill="none" stroke="#6b7280" stroke-width="1.6" marker-end="url(#rel2-a)"/>
+  <rect x="280" y="42" width="58" height="32" rx="6" fill="#fff" stroke="#d6cdb5" stroke-width="1.4"/>
+  <text class="lbl" x="309" y="62" text-anchor="middle">use it</text>
+  <path d="M235 78 L235 118" fill="none" stroke="#d97706" stroke-width="1.6" marker-end="url(#rel2-b)"/>
+  <rect x="96" y="120" width="176" height="30" rx="6" fill="#fff" stroke="#d97706" stroke-width="1.4"/>
+  <text class="lbl" x="184" y="139" text-anchor="middle">on fail: retry · repair · fall back</text>
+  <path d="M150 120 L150 76" fill="none" stroke="#d97706" stroke-width="1.6" marker-end="url(#rel2-b)"/>
+  <defs>
+    <marker id="rel2-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#6b7280"/></marker>
+    <marker id="rel2-b" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#d97706"/></marker>
+  </defs>
+</svg>`,
       explanation:
         "Because you cannot fully trust either what comes in or what comes out, a robust LLM feature wraps the model in checks on both sides. On the input side you validate and sanitize what users send: reject or clean malformed data, enforce length limits, and watch for prompt injection, where a user (or a fetched document) tries to smuggle instructions that hijack the model. On the output side you never blindly use the model's text. You validate that it matches the structure you need, and for machine-readable results you use structured-output enforcement, asking the model for a specific format (often JSON matching a schema) and then parsing and checking it before anything downstream consumes it. If validation fails, you retry, repair, or fall back rather than passing a broken answer onward. Treating the model as an unreliable narrator whose every statement is checked is the core reliability discipline.",
       keyTerms: [
@@ -61,6 +126,45 @@ const mod: Category = {
     },
     {
       heading: 'Guardrails and content safety',
+      video: { url: "https://www.youtube.com/watch?v=KwDjXYw4mGE", title: "🛡️ AI Guardrails for LLMs | How to Build Safe and Trustworthy Systems", channel: "Ashok Babu Kandula" },
+      caption:
+        'Independent guardrails sit on both sides of the model. They block disallowed or injected input and catch unsafe output before a user sees it, so the model is never trusted to police itself.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rel3-t">
+  <title id="rel3-t">Independent guardrails screen input and output around the model</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .mut{fill:#6b7280;font-size:10px}.tag{font-size:13px;font-weight:600}.lbl{font-size:11px}
+  </style>
+  <rect x="6" y="42" width="46" height="32" rx="6" fill="#fff" stroke="#d6cdb5" stroke-width="1.4"/>
+  <text class="lbl" x="29" y="62" text-anchor="middle">input</text>
+  <path d="M52 58 L62 58" fill="none" stroke="#1f7a50" stroke-width="1.6" marker-end="url(#rel3-g)"/>
+  <rect x="62" y="38" width="64" height="40" rx="6" fill="#efe9da" stroke="#0b5394" stroke-width="1.4"/>
+  <text class="lbl" x="94" y="54" text-anchor="middle">Input</text>
+  <text class="lbl" x="94" y="68" text-anchor="middle">guardrail</text>
+  <path d="M126 58 L138 58" fill="none" stroke="#1f7a50" stroke-width="1.6" marker-end="url(#rel3-g)"/>
+  <rect x="138" y="42" width="46" height="32" rx="6" fill="#2f8cff" stroke="#0b5394" stroke-width="1.4"/>
+  <text class="lbl" x="161" y="62" text-anchor="middle" fill="#fff">model</text>
+  <path d="M184 58 L196 58" fill="none" stroke="#1f7a50" stroke-width="1.6" marker-end="url(#rel3-g)"/>
+  <rect x="196" y="38" width="70" height="40" rx="6" fill="#efe9da" stroke="#0b5394" stroke-width="1.4"/>
+  <text class="lbl" x="231" y="54" text-anchor="middle">Output</text>
+  <text class="lbl" x="231" y="68" text-anchor="middle">guardrail</text>
+  <text class="mut" x="300" y="50" text-anchor="middle">safe reply</text>
+  <path d="M266 58 L300 58" fill="none" stroke="#1f7a50" stroke-width="1.6" marker-end="url(#rel3-g)"/>
+  <rect x="300" y="42" width="54" height="32" rx="6" fill="#fff" stroke="#d6cdb5" stroke-width="1.4"/>
+  <text class="lbl" x="327" y="62" text-anchor="middle">user</text>
+  <path d="M94 78 L94 102" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#rel3-r)"/>
+  <rect x="54" y="104" width="80" height="26" rx="5" fill="#fff" stroke="#dc2626" stroke-width="1.2"/>
+  <text class="lbl" x="94" y="121" text-anchor="middle" fill="#dc2626">disallowed</text>
+  <path d="M231 78 L231 102" fill="none" stroke="#dc2626" stroke-width="1.6" marker-end="url(#rel3-r)"/>
+  <rect x="190" y="104" width="84" height="26" rx="5" fill="#fff" stroke="#dc2626" stroke-width="1.2"/>
+  <text class="lbl" x="232" y="121" text-anchor="middle" fill="#dc2626">unsafe reply</text>
+  <text class="mut" x="180" y="154" text-anchor="middle">content filter scans hate · self-harm · sexual</text>
+  <text class="mut" x="180" y="172" text-anchor="middle">defense in depth: model not trusted alone</text>
+  <defs>
+    <marker id="rel3-g" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#1f7a50"/></marker>
+    <marker id="rel3-r" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#dc2626"/></marker>
+  </defs>
+</svg>`,
       explanation:
         "Guardrails are the checks that sit around the model to keep its behavior within bounds the model itself cannot guarantee. They come in two directions. Input guardrails screen what goes in, blocking disallowed requests or stripping injected instructions before the model ever sees them. Output guardrails screen what comes out, catching unsafe, off-topic, or policy-violating responses before a user sees them. Content filters (moderation) are a common form, scanning for categories like hate, self-harm, or sexual content. Guardrails can be simple rules (regular expressions, allowlists, banned-term checks), separate classifier models, or even a second LLM acting as a judge. The key principle is defense in depth: the generating model is not trusted to police itself, so independent checks stand on either side of it, and a failed check triggers a safe response rather than passing the problem through.",
       keyTerms: [
@@ -83,6 +187,38 @@ const mod: Category = {
     },
     {
       heading: 'Retries, fallbacks, timeouts, and graceful degradation',
+      video: { url: "https://www.youtube.com/watch?v=Bup8Li6NvVA", title: "LLM Resilience — Error Handling & Retry Mechanisms in Production AI | Uplatz", channel: "Uplatz" },
+      caption:
+        'When a call fails it retries with a growing wait, a timeout caps how long you stall, and a fallback keeps the feature working instead of breaking.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rel4-t">
+  <title id="rel4-t">Failed calls retry with growing backoff, a timeout caps the wait, then a fallback keeps it working</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .mut{fill:#6b7280;font-size:10px}.tag{font-size:13px;font-weight:600}.lbl{font-size:11px}
+  </style>
+  <text class="mut" x="14" y="22">A call fails or stalls</text>
+  <line x1="24" y1="128" x2="210" y2="128" stroke="#e6dfce" stroke-width="1.5"/>
+  <path d="M40 122 Q63 100 86 122" fill="none" stroke="#6b7280" stroke-width="1.4"/>
+  <text class="mut" x="63" y="96" text-anchor="middle">wait 1s</text>
+  <path d="M86 122 Q128 84 170 122" fill="none" stroke="#6b7280" stroke-width="1.4"/>
+  <text class="mut" x="128" y="78" text-anchor="middle">wait 2s (backoff grows)</text>
+  <g fill="#dc2626">
+    <circle cx="40" cy="128" r="6"/><circle cx="86" cy="128" r="6"/><circle cx="170" cy="128" r="6"/>
+  </g>
+  <g class="mut" text-anchor="middle">
+    <text x="40" y="148">try 1</text><text x="86" y="148">try 2</text><text x="170" y="148">try 3</text>
+  </g>
+  <circle cx="206" cy="54" r="7" fill="#fff" stroke="#d97706" stroke-width="1.4"/>
+  <path d="M206 54 L206 49 M206 54 L210 56" stroke="#d97706" stroke-width="1.2" fill="none"/>
+  <text class="mut" x="206" y="42" text-anchor="middle" fill="#d97706">timeout</text>
+  <line x1="206" y1="64" x2="206" y2="150" stroke="#d97706" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <path d="M176 128 L236 116" fill="none" stroke="#1f7a50" stroke-width="1.6" marker-end="url(#rel4-a)"/>
+  <rect x="238" y="90" width="116" height="64" rx="8" fill="#fff" stroke="#1f7a50" stroke-width="1.4"/>
+  <text class="tag" x="246" y="110" fill="#1f7a50">Fallback</text>
+  <g class="mut"><text x="246" y="126">smaller model</text><text x="246" y="139">cached answer</text><text x="246" y="152">polite 'try later'</text></g>
+  <text class="mut" x="296" y="176" text-anchor="middle">graceful degradation</text>
+  <defs><marker id="rel4-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#1f7a50"/></marker></defs>
+</svg>`,
       explanation:
         "Calls to a model API fail or stall for ordinary reasons: transient errors, rate limits, or a response that does not pass validation. A dependable feature plans for this. A retry re-attempts a failed call, ideally with a short increasing wait (backoff) so you do not hammer a struggling service. A fallback is a backup plan when the primary path keeps failing: a smaller or alternate model, a cached answer, or a plain message that the feature is unavailable. A timeout caps how long you wait before giving up, so one slow call cannot freeze the whole experience. Rate limits are handled by slowing down and queueing rather than crashing. The overarching goal is graceful degradation: when something breaks, the user gets a slightly worse but still working experience (a simpler answer, a polite apology) instead of a spinner forever or a stack trace. Crucially, retries must be safe to repeat, so an action that charges money or sends an email needs protection against being done twice.",
       keyTerms: [
@@ -105,6 +241,34 @@ const mod: Category = {
     },
     {
       heading: 'Observability: logging, monitoring drift, and closing the loop',
+      video: { url: "https://www.youtube.com/watch?v=WEJ2DvHIIbI", title: "AI Observability Explained - LLM & RAG Monitoring (Drift, Tools, Pipeline) AI/Ml Interview Question", channel: "Peetha Academy" },
+      caption:
+        'Logs and monitoring catch quality slipping over time, and real failures plus user feedback become new test cases. Each trip around the loop makes the feature more reliable.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rel5-t">
+  <title id="rel5-t">Logs and monitoring feed drift and feedback back into evals, closing the loop</title>
+  <style>
+    text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;fill:#1c1d1f}
+    .mut{fill:#6b7280;font-size:10px}.tag{font-size:12px;font-weight:600}.lbl{font-size:11px}
+  </style>
+  <rect x="110" y="14" width="140" height="32" rx="6" fill="#fff" stroke="#d6cdb5" stroke-width="1.4"/>
+  <text class="lbl" x="180" y="34" text-anchor="middle">Production traffic</text>
+  <rect x="246" y="70" width="108" height="46" rx="6" fill="#fff" stroke="#d6cdb5" stroke-width="1.4"/>
+  <text class="lbl" x="300" y="90" text-anchor="middle">Monitor</text>
+  <text class="mut" x="300" y="104" text-anchor="middle" fill="#dc2626">quality drift down</text>
+  <rect x="108" y="150" width="144" height="40" rx="6" fill="#fff" stroke="#d6cdb5" stroke-width="1.4"/>
+  <text class="lbl" x="180" y="174" text-anchor="middle">User feedback</text>
+  <rect x="6" y="70" width="108" height="46" rx="6" fill="#fff" stroke="#d6cdb5" stroke-width="1.4"/>
+  <text class="lbl" x="60" y="90" text-anchor="middle">Update evals</text>
+  <text class="mut" x="60" y="104" text-anchor="middle">new test cases</text>
+  <path d="M250 40 Q322 46 300 68" fill="none" stroke="#0b5394" stroke-width="1.6" marker-end="url(#rel5-a)"/>
+  <text class="mut" x="300" y="60" text-anchor="middle">log + trace</text>
+  <path d="M300 116 Q300 156 254 168" fill="none" stroke="#0b5394" stroke-width="1.6" marker-end="url(#rel5-a)"/>
+  <path d="M108 168 Q40 156 60 118" fill="none" stroke="#0b5394" stroke-width="1.6" marker-end="url(#rel5-a)"/>
+  <path d="M60 70 Q40 44 108 38" fill="none" stroke="#0b5394" stroke-width="1.6" marker-end="url(#rel5-a)"/>
+  <text class="tag" x="180" y="98" text-anchor="middle" fill="#0b5394">close the loop</text>
+  <text class="mut" x="180" y="114" text-anchor="middle">more reliable each pass</text>
+  <defs><marker id="rel5-a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#0b5394"/></marker></defs>
+</svg>`,
       explanation:
         "You cannot fix what you cannot see, so observability is what turns a fragile demo into a maintainable product. Logging records each interaction (the prompt, the response, the model and settings used, token counts, latency, and which guardrails fired), with care to handle sensitive data responsibly. Tracing follows a single request through every step of a multi-call or agent flow so you can see where it went wrong. On top of logs, monitoring watches aggregate health: error rates, latency, cost, and most importantly quality, because an LLM feature can quietly get worse over time. That decay is called drift, and it creeps in when the world changes, a model version updates, or your inputs shift away from what you originally tested. You detect it by sampling real traffic and scoring it, and by capturing user feedback (thumbs up and down, edits, abandonment). The payoff comes when you close the loop: real failures and feedback become new test cases in your evaluation set, so the system gets measurably more reliable with each incident instead of repeating the same mistakes.",
       keyTerms: [

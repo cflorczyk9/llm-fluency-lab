@@ -65,7 +65,9 @@ those explain the idea in words rather than equations.
 - **Home** sets your "fluent by" target date and builds a study program around it.
 - **Learn** is the library. Work an area top to bottom: watch the lesson, read
   the breakdown, answer the "check yourself" prompts, then peek at the cards.
-  Modules are grouped under the four tiers so the path is easy to follow.
+  Modules are grouped under the four tiers so the path is easy to follow. The
+  view runs full width, so an open module uses the whole screen instead of a
+  narrow strip.
 - **Study** runs your daily review session of due cards.
 - **Dashboard** shows your fluency over time, a radar of mastery across the four
   tiers, a per-module breakdown, your weakest areas, and a calibration readout.
@@ -74,6 +76,21 @@ those explain the idea in words rather than equations.
 
 Your progress is saved locally in the browser. Use Export to back it up to a
 file and Import to restore it.
+
+### The redesigned breakdown ("See how it works")
+
+Inside an open module, the breakdown is diagram-led and reads visually first.
+It starts with the module's interactive diagram as a full-width hero, then lays
+out a responsive grid of concept tiles, one per breakdown section. Each tile
+carries its own small schematic SVG, a one or two sentence caption in plain
+language, the key terms as compact chips, a link to a curated YouTube explainer
+for that exact concept, and a "Read more" toggle that reveals the full prose and
+glossary on demand. The default view stays short and visual, so there are no
+walls of text until you ask for them. The roughly one hundred inline SVGs share
+one canvas size, palette, stroke weight, and label scale, so the whole set reads
+as a single family. Each SVG carries a title for screen readers, every Watch
+link opens in a new tab and names where it goes, and any motion is turned off
+when the reader prefers reduced motion.
 
 ### Diagrams
 

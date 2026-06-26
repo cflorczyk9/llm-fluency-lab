@@ -21,6 +21,39 @@ const mod: Category = {
   breakdown: [
     {
       heading: 'The test-time compute idea',
+      video: { url: "https://www.youtube.com/watch?v=DAlC8mL5ZlI", title: "Why AI Models Pause to Think: Test Time Compute Explained", channel: "IBM Technology" },
+      caption:
+        'A single pass has to answer right away. A reasoning model writes a few steps first, which leaves room to break the problem up and catch slips.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rsn1t" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fill="#1c1d1f">
+  <title id="rsn1t">A single forward pass answers at once, while a reasoning model adds steps first</title>
+  <style>.rsn1g{animation:rsn1p 2.6s ease-in-out infinite}@keyframes rsn1p{0%,100%{opacity:1}50%{opacity:.55}}@media (prefers-reduced-motion:reduce){.rsn1g{animation:none}}</style>
+  <defs><marker id="rsn1a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6b7280"/></marker></defs>
+  <text x="180" y="18" text-anchor="middle" font-size="12.5" font-weight="700">Think before answering</text>
+  <text x="18" y="40" font-size="10" fill="#6b7280">Answer immediately</text>
+  <rect x="18" y="46" width="44" height="26" rx="6" fill="#fff" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="40" y="63" text-anchor="middle" font-size="11">Q</text>
+  <text x="164" y="52" text-anchor="middle" font-size="10" fill="#6b7280">no room to work it out</text>
+  <line x1="64" y1="62" x2="262" y2="62" stroke="#6b7280" stroke-width="1.6" marker-end="url(#rsn1a)"/>
+  <rect x="266" y="49" width="76" height="26" rx="6" fill="#fff" stroke="#dc2626" stroke-width="1.6"/>
+  <text x="304" y="66" text-anchor="middle" font-size="11" fill="#dc2626">rushed guess</text>
+  <line x1="18" y1="92" x2="342" y2="92" stroke="#e6dfce" stroke-width="1.5"/>
+  <text x="18" y="110" font-size="11" font-weight="600" fill="#1f7a50">Reason step by step</text>
+  <rect x="18" y="118" width="40" height="26" rx="6" fill="#fff" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="38" y="135" text-anchor="middle" font-size="11">Q</text>
+  <g class="rsn1g">
+    <rect x="74" y="120" width="54" height="22" rx="5" fill="#efe9da" stroke="#e6dfce" stroke-width="1.4"/><text x="101" y="135" text-anchor="middle" font-size="10" fill="#6b7280">step 1</text>
+    <rect x="146" y="120" width="54" height="22" rx="5" fill="#efe9da" stroke="#e6dfce" stroke-width="1.4"/><text x="173" y="135" text-anchor="middle" font-size="10" fill="#6b7280">step 2</text>
+    <rect x="218" y="120" width="54" height="22" rx="5" fill="#efe9da" stroke="#e6dfce" stroke-width="1.4"/><text x="245" y="135" text-anchor="middle" font-size="10" fill="#6b7280">step 3</text>
+  </g>
+  <line x1="58" y1="131" x2="72" y2="131" stroke="#6b7280" stroke-width="1.4" marker-end="url(#rsn1a)"/>
+  <line x1="128" y1="131" x2="144" y2="131" stroke="#6b7280" stroke-width="1.4" marker-end="url(#rsn1a)"/>
+  <line x1="200" y1="131" x2="216" y2="131" stroke="#6b7280" stroke-width="1.4" marker-end="url(#rsn1a)"/>
+  <line x1="272" y1="131" x2="286" y2="131" stroke="#6b7280" stroke-width="1.4" marker-end="url(#rsn1a)"/>
+  <rect x="290" y="118" width="52" height="26" rx="6" fill="#fff" stroke="#1f7a50" stroke-width="1.6"/>
+  <text x="316" y="135" text-anchor="middle" font-size="11" fill="#1f7a50">answer</text>
+  <text x="180" y="164" text-anchor="middle" font-size="10" fill="#6b7280">breaking it apart leaves room to catch mistakes</text>
+  <text x="180" y="184" text-anchor="middle" font-size="10" fill="#6b7280">more steps means more tokens, so more time and cost</text>
+</svg>`,
       explanation:
         'For years the main way to make models better was to spend more compute during training: bigger models, more data. Test-time compute (also called inference-time compute) is a different lever: spend more computation when the model answers a specific question, so it can work through the problem instead of blurting the first thing that comes to mind. Concretely, the model generates a chain of intermediate steps before its final answer, which gives it room to break a hard problem into parts, catch its own mistakes, and combine sub-results. This helps most on problems that genuinely require multiple steps (math, logic, planning, careful code), because a single forward pass that must produce the answer immediately has no room to "work it out." The trade is direct: more thinking means more tokens generated, which costs more money and takes more time per answer.',
       keyTerms: [
@@ -43,6 +76,36 @@ const mod: Category = {
     },
     {
       heading: 'From chain-of-thought prompting to trained reasoning models',
+      video: { url: "https://www.youtube.com/watch?v=Fp-ue4UCE3s", title: "What Is Chain-of-Thought Prompting in Generative AI?", channel: "Eye on Tech" },
+      caption:
+        'Chain-of-thought is a prompt trick you add to any model. A trained reasoning model thinks on its own and often hides the steps, showing only a summary.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rsn2t" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fill="#1c1d1f">
+  <title id="rsn2t">Chain-of-thought is a prompt you add, a trained reasoning model thinks on its own</title>
+  <style>.rsn2g{animation:rsn2p 2.8s ease-in-out infinite}@keyframes rsn2p{0%,100%{opacity:1}50%{opacity:.55}}@media (prefers-reduced-motion:reduce){.rsn2g{animation:none}}</style>
+  <defs><marker id="rsn2a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6b7280"/></marker></defs>
+  <text x="180" y="18" text-anchor="middle" font-size="12.5" font-weight="700">From prompting to trained reasoning</text>
+  <rect x="12" y="30" width="162" height="150" rx="10" fill="#fff" stroke="#e6dfce" stroke-width="1.5"/>
+  <text x="93" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#0b5394">Chain-of-thought</text>
+  <text x="93" y="62" text-anchor="middle" font-size="9.5" fill="#6b7280">a prompt trick</text>
+  <rect x="28" y="72" width="130" height="26" rx="6" fill="#efe9da" stroke="#e6dfce" stroke-width="1.4"/>
+  <text x="93" y="89" text-anchor="middle" font-size="10">'think step by step'</text>
+  <line x1="93" y1="100" x2="93" y2="116" stroke="#6b7280" stroke-width="1.5" marker-end="url(#rsn2a)"/>
+  <rect x="40" y="120" width="106" height="30" rx="6" fill="#fff" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="93" y="139" text-anchor="middle" font-size="10.5">any model</text>
+  <text x="93" y="168" text-anchor="middle" font-size="9.5" fill="#6b7280">you add it each time</text>
+  <rect x="186" y="30" width="162" height="150" rx="10" fill="#fff" stroke="#1f7a50" stroke-width="1.6"/>
+  <text x="267" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#1f7a50">Trained reasoner</text>
+  <text x="267" y="62" text-anchor="middle" font-size="9.5" fill="#6b7280">thinks by default</text>
+  <rect class="rsn2g" x="206" y="70" width="122" height="42" rx="6" fill="#f7f3ea" stroke="#1f7a50" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <text x="267" y="84" text-anchor="middle" font-size="9.5" fill="#6b7280">hidden thinking</text>
+  <line x1="218" y1="92" x2="316" y2="92" stroke="#6b7280" stroke-width="1" opacity="0.5"/>
+  <line x1="218" y1="99" x2="316" y2="99" stroke="#6b7280" stroke-width="1" opacity="0.5"/>
+  <line x1="218" y1="106" x2="298" y2="106" stroke="#6b7280" stroke-width="1" opacity="0.5"/>
+  <line x1="267" y1="114" x2="267" y2="128" stroke="#6b7280" stroke-width="1.5" marker-end="url(#rsn2a)"/>
+  <rect x="210" y="132" width="114" height="26" rx="6" fill="#fff" stroke="#1f7a50" stroke-width="1.5"/>
+  <text x="267" y="149" text-anchor="middle" font-size="10" fill="#1f7a50">summary + answer</text>
+  <text x="267" y="172" text-anchor="middle" font-size="9.5" fill="#6b7280">still billed for hidden steps</text>
+</svg>`,
       explanation:
         'Chain-of-thought (CoT) is the original, prompt-level version of this idea: you simply ask the model to "think step by step," and it writes out its reasoning before the answer, which improves accuracy on multi-step tasks. That is a prompting technique you apply to an ordinary model. A trained reasoning model goes further: it is specifically trained (often with reinforcement learning that rewards reaching correct answers) to produce long internal reasoning on its own, without being asked, and to use that thinking time well, for example by exploring approaches and backtracking. The reasoning text is sometimes called thinking tokens or a scratchpad. A key practical detail: some reasoning models keep their detailed thinking hidden and show you only a summary plus the final answer, while still charging for the hidden thinking tokens, because that internal work is real computation even when you do not see it.',
       keyTerms: [
@@ -65,6 +128,43 @@ const mod: Category = {
     },
     {
       heading: 'Getting more out of reasoning: many paths and verification',
+      video: { url: "https://www.youtube.com/watch?v=IMkSUxGKfvw", title: "Chain of Thought Self-Consistency: Improve AI Accuracy by Comparing Multiple Reasoning Paths", channel: "LearnAwesome" },
+      caption:
+        'Two ways to spend more compute. Self-consistency runs the problem several times and takes the majority answer. Verification checks a step against a real tool.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rsn3t" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fill="#1c1d1f">
+  <title id="rsn3t">Self-consistency votes across many runs, verification checks a step with a tool</title>
+  <style>.rsn3g{animation:rsn3p 2.6s ease-in-out infinite}@keyframes rsn3p{0%,100%{opacity:1}50%{opacity:.5}}@media (prefers-reduced-motion:reduce){.rsn3g{animation:none}}</style>
+  <defs><marker id="rsn3a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6b7280"/></marker></defs>
+  <text x="180" y="18" text-anchor="middle" font-size="12.5" font-weight="700">Spend more for a more reliable answer</text>
+  <line x1="180" y1="30" x2="180" y2="186" stroke="#e6dfce" stroke-width="1.4" stroke-dasharray="4 4"/>
+  <text x="92" y="44" text-anchor="middle" font-size="11" font-weight="600" fill="#0b5394">Self-consistency</text>
+  <text x="92" y="58" text-anchor="middle" font-size="9.5" fill="#6b7280">run it several times, vote</text>
+  <circle cx="26" cy="104" r="13" fill="#fff" stroke="#6b7280" stroke-width="1.5"/>
+  <text x="26" y="108" text-anchor="middle" font-size="10">Q</text>
+  <path d="M39,98 C56,86 64,80 76,76" fill="none" stroke="#6b7280" stroke-width="1.4"/>
+  <path d="M39,104 C56,104 64,104 76,104" fill="none" stroke="#6b7280" stroke-width="1.4"/>
+  <path d="M39,110 C56,122 64,128 76,132" fill="none" stroke="#6b7280" stroke-width="1.4"/>
+  <rect x="78" y="66" width="34" height="20" rx="5" fill="#fff" stroke="#e6dfce" stroke-width="1.4"/><text x="95" y="80" text-anchor="middle" font-size="10">7</text>
+  <rect x="78" y="94" width="34" height="20" rx="5" fill="#fff" stroke="#e6dfce" stroke-width="1.4"/><text x="95" y="108" text-anchor="middle" font-size="10">7</text>
+  <rect x="78" y="122" width="34" height="20" rx="5" fill="#fff" stroke="#e6dfce" stroke-width="1.4"/><text x="95" y="136" text-anchor="middle" font-size="10">9</text>
+  <line x1="112" y1="78" x2="126" y2="96" stroke="#6b7280" stroke-width="1.2" marker-end="url(#rsn3a)"/>
+  <line x1="112" y1="104" x2="126" y2="104" stroke="#6b7280" stroke-width="1.2" marker-end="url(#rsn3a)"/>
+  <line x1="112" y1="130" x2="126" y2="113" stroke="#6b7280" stroke-width="1.2" marker-end="url(#rsn3a)"/>
+  <rect class="rsn3g" x="130" y="90" width="44" height="30" rx="6" fill="#fff" stroke="#1f7a50" stroke-width="1.6"/>
+  <text x="152" y="105" text-anchor="middle" font-size="12" font-weight="700" fill="#1f7a50">7</text>
+  <text x="152" y="115" text-anchor="middle" font-size="8" fill="#6b7280">wins</text>
+  <text x="92" y="170" text-anchor="middle" font-size="9.5" fill="#6b7280">the most common answer wins</text>
+  <text x="268" y="44" text-anchor="middle" font-size="11" font-weight="600" fill="#1f7a50">Verification</text>
+  <text x="268" y="58" text-anchor="middle" font-size="9.5" fill="#6b7280">check it against a tool</text>
+  <rect x="198" y="70" width="140" height="24" rx="6" fill="#efe9da" stroke="#e6dfce" stroke-width="1.4"/>
+  <text x="268" y="86" text-anchor="middle" font-size="10">claim: 17 x 23 = 391</text>
+  <line x1="268" y1="96" x2="268" y2="108" stroke="#6b7280" stroke-width="1.5" marker-end="url(#rsn3a)"/>
+  <rect x="232" y="110" width="72" height="26" rx="6" fill="#fff" stroke="#2f8cff" stroke-width="1.6"/>
+  <text x="268" y="127" text-anchor="middle" font-size="10" fill="#0b5394">run the code</text>
+  <line x1="268" y1="138" x2="268" y2="150" stroke="#6b7280" stroke-width="1.5" marker-end="url(#rsn3a)"/>
+  <rect class="rsn3g" x="206" y="152" width="124" height="24" rx="6" fill="#fff" stroke="#1f7a50" stroke-width="1.6"/>
+  <text x="268" y="168" text-anchor="middle" font-size="10" fill="#1f7a50">verified against a real result</text>
+</svg>`,
       explanation:
         'Once a model can reason, you can spend even more test-time compute to push accuracy further. Self-consistency runs the model several times on the same problem (with sampling, so each run can take a different route) and then picks the answer that shows up most often, which is more reliable than trusting any single run, at the cost of running the model many times. Another powerful pattern is verification: instead of trusting the reasoning, you check it. The model can call a tool (run code, query a database, use a calculator) so a step is validated against ground truth rather than just sounding right, or a separate check confirms the final answer. Tool-checked reasoning is especially valuable because it grounds the model\'s steps in something real, turning "this looks correct" into "this was actually verified," which directly attacks the risk that fluent reasoning is still wrong.',
       keyTerms: [
@@ -87,6 +187,26 @@ const mod: Category = {
     },
     {
       heading: 'Trade-offs, knowledge, and limits',
+      video: { url: "https://www.youtube.com/watch?v=9-vhYcPe5W4", title: "Do Reasoning Models Hallucinate More?", channel: "The AI Daily Brief: Artificial Intelligence News" },
+      caption:
+        'Reasoning earns its cost on hard multi-step work and wastes it on easy tasks. It cannot add facts the model never learned, and a neat chain is not proof.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="rsn4t" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fill="#1c1d1f">
+  <title id="rsn4t">Reasoning helps on hard multi-step work, is overkill on easy tasks, and cannot supply missing facts</title>
+  <text x="180" y="18" text-anchor="middle" font-size="12.5" font-weight="700">A trade, not a guarantee</text>
+  <rect x="12" y="30" width="164" height="98" rx="10" fill="#fff" stroke="#1f7a50" stroke-width="1.6"/>
+  <text x="94" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#1f7a50">Worth the thinking</text>
+  <text x="28" y="68" font-size="11" fill="#1f7a50">+</text><text x="42" y="68" font-size="10">hard, multi-step math</text>
+  <text x="28" y="88" font-size="11" fill="#1f7a50">+</text><text x="42" y="88" font-size="10">logic and planning</text>
+  <text x="28" y="108" font-size="11" fill="#1f7a50">+</text><text x="42" y="108" font-size="10">careful code</text>
+  <rect x="184" y="30" width="164" height="98" rx="10" fill="#fff" stroke="#d97706" stroke-width="1.6"/>
+  <text x="266" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#d97706">Overkill</text>
+  <text x="200" y="68" font-size="11" fill="#d97706">x</text><text x="214" y="68" font-size="10">simple lookups</text>
+  <text x="200" y="88" font-size="11" fill="#d97706">x</text><text x="214" y="88" font-size="10">short rewrites</text>
+  <text x="200" y="108" font-size="11" fill="#d97706">x</text><text x="214" y="108" font-size="10">quick chat</text>
+  <rect x="12" y="138" width="336" height="46" rx="8" fill="#efe9da" stroke="#dc2626" stroke-width="1.3"/>
+  <text x="180" y="157" text-anchor="middle" font-size="9.5">More steps cannot supply facts the model never learned. Use retrieval.</text>
+  <text x="180" y="173" text-anchor="middle" font-size="9.5">A tidy chain of thought is not proof the answer is right.</text>
+</svg>`,
       explanation:
         'Reasoning is not free and not always better. The costs are concrete: it generates far more tokens, so it costs more per answer and is slower, sometimes much slower, before the first useful output appears. For simple lookups, formatting, short rewrites, or quick chat, that extra thinking is wasted overhead and can even over-complicate an easy task. A crucial distinction is reasoning versus knowledge: thinking longer helps the model use what it knows more carefully, but it cannot conjure facts it never learned. If the answer depends on information the model lacks, more steps will not fix it, and the right tool is retrieval (giving it the facts), not more reasoning. Finally, more steps do not guarantee correctness: a model can reason confidently to a wrong answer, and the written reasoning is not always a faithful account of how it actually reached its conclusion, so a clean-looking chain of thought is not proof the answer is right.',
       keyTerms: [

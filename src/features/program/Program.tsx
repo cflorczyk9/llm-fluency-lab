@@ -94,7 +94,7 @@ export default function Program() {
   // No diagnostic yet: send them to the placement test.
   if (!diagnostic) {
     return (
-      <div className="view">
+      <div className="view view-task">
         <h2 className="section">Your program</h2>
         <Panel>
           <div style={{ fontWeight: 700, fontSize: 18 }}>
@@ -119,7 +119,7 @@ export default function Program() {
   if (!program) {
     const overallPct = Math.round(diagnostic.overall * 100);
     return (
-      <div className="view">
+      <div className="view view-task">
         <h2 className="section">Build your program</h2>
         <div className="grid" style={{ gridTemplateColumns: '1fr' }}>
           <Panel>
@@ -145,7 +145,7 @@ export default function Program() {
   const targetPast = daysLeft < 0;
 
   return (
-    <div className="view">
+    <div className="view view-task">
       <h2 className="section">Your program</h2>
 
       <div className="grid" style={{ gridTemplateColumns: '1fr' }}>

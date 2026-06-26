@@ -17,6 +17,29 @@ const mod: Category = {
   breakdown: [
     {
       heading: 'Who makes and serves models',
+      video: { url: "https://www.youtube.com/watch?v=lVS7jR93rkA", title: "LLM Ecosystems: Frontier vs Open-Weight Models Explained", channel: "Ready Tensor" },
+      caption:
+        'One model can reach you through a few different doors. The lab API, a cloud platform, or an aggregator that fronts many models at once.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="lnd1t" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fill="#1c1d1f">
+  <title id="lnd1t">One model can reach you through a provider API, a cloud platform, or an aggregator</title>
+  <style>.lnd1g{animation:lnd1p 2.8s ease-in-out infinite}@keyframes lnd1p{0%,100%{opacity:1}50%{opacity:.6}}@media (prefers-reduced-motion:reduce){.lnd1g{animation:none}}</style>
+  <defs><marker id="lnd1a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6b7280"/></marker></defs>
+  <text x="180" y="18" text-anchor="middle" font-size="12.5" font-weight="700">One model, several ways to reach you</text>
+  <rect x="14" y="80" width="78" height="40" rx="8" fill="#fff" stroke="#0b5394" stroke-width="1.8"/>
+  <text x="53" y="98" text-anchor="middle" font-size="11" font-weight="600" fill="#0b5394">a model</text>
+  <text x="53" y="112" text-anchor="middle" font-size="8.5" fill="#6b7280">trained once</text>
+  <rect x="138" y="40" width="116" height="30" rx="7" fill="#fff" stroke="#e6dfce" stroke-width="1.5"/><text x="196" y="59" text-anchor="middle" font-size="10">provider API</text>
+  <rect x="138" y="85" width="116" height="30" rx="7" fill="#fff" stroke="#e6dfce" stroke-width="1.5"/><text x="196" y="104" text-anchor="middle" font-size="10">cloud platform</text>
+  <rect x="138" y="130" width="116" height="30" rx="7" fill="#fff" stroke="#e6dfce" stroke-width="1.5"/><text x="196" y="149" text-anchor="middle" font-size="10">aggregator / router</text>
+  <line x1="92" y1="92" x2="136" y2="56" stroke="#6b7280" stroke-width="1.4" marker-end="url(#lnd1a)"/>
+  <line x1="92" y1="100" x2="136" y2="100" stroke="#6b7280" stroke-width="1.4" marker-end="url(#lnd1a)"/>
+  <line x1="92" y1="108" x2="136" y2="144" stroke="#6b7280" stroke-width="1.4" marker-end="url(#lnd1a)"/>
+  <line x1="254" y1="55" x2="290" y2="92" stroke="#6b7280" stroke-width="1.4" marker-end="url(#lnd1a)"/>
+  <line x1="254" y1="100" x2="288" y2="100" stroke="#6b7280" stroke-width="1.4" marker-end="url(#lnd1a)"/>
+  <line x1="254" y1="145" x2="290" y2="108" stroke="#6b7280" stroke-width="1.4" marker-end="url(#lnd1a)"/>
+  <rect class="lnd1g" x="290" y="85" width="58" height="30" rx="7" fill="#efe9da" stroke="#1f7a50" stroke-width="1.6"/><text x="319" y="104" text-anchor="middle" font-size="10" fill="#1f7a50">you</text>
+  <text x="180" y="184" text-anchor="middle" font-size="9.5" fill="#6b7280">frontier labs train, open-weight providers publish, the rest resell access</text>
+</svg>`,
       explanation:
         'The market has a few distinct kinds of players, and knowing which is which keeps you from comparing apples to oranges. Frontier labs train the largest, most capable models and usually serve them through their own paid API and apps. Open-weight providers publish the trained model files so anyone can download and run them. Cloud platforms resell access to many of these models through one account and one bill, and they add hosting, security, and compliance features. Aggregators and routers sit on top and let you call dozens of models through a single interface. The same underlying model can reach you through several of these paths at once, so "which model" and "through whom" are two separate decisions.',
       keyTerms: [
@@ -39,6 +62,38 @@ const mod: Category = {
     },
     {
       heading: 'Closed, open-weight, and open-source',
+      video: { url: "https://www.youtube.com/watch?v=Wdlvy-tKqjo", title: "Closed-source vs. Open-source models: What enterprises should know | Box AI Explainer Series EP 13", channel: "Box" },
+      caption:
+        'Open means three different things. Closed gives answers only, open-weight hands you the files to run, open-source also shares the data and recipe.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="lnd2t" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fill="#1c1d1f">
+  <title id="lnd2t">Closed, open-weight, and open-source sit on a scale from convenience to control</title>
+  <defs><marker id="lnd2a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6b7280"/></marker></defs>
+  <text x="180" y="18" text-anchor="middle" font-size="12.5" font-weight="700">Three meanings of "open"</text>
+  <rect x="12" y="30" width="108" height="118" rx="9" fill="#fff" stroke="#0b5394" stroke-width="1.6"/>
+  <text x="66" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#0b5394">Closed</text>
+  <text x="66" y="64" text-anchor="middle" font-size="9" fill="#6b7280">service only</text>
+  <text x="66" y="86" text-anchor="middle" font-size="9">prompts in,</text>
+  <text x="66" y="98" text-anchor="middle" font-size="9">answers out</text>
+  <text x="66" y="120" text-anchor="middle" font-size="9" fill="#6b7280">no files</text>
+  <text x="66" y="138" text-anchor="middle" font-size="8.5" fill="#6b7280">top capability</text>
+  <rect x="126" y="30" width="108" height="118" rx="9" fill="#fff" stroke="#1f7a50" stroke-width="1.8"/>
+  <text x="180" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#1f7a50">Open-weight</text>
+  <text x="180" y="64" text-anchor="middle" font-size="9" fill="#6b7280">files you can run</text>
+  <text x="180" y="86" text-anchor="middle" font-size="9">download the</text>
+  <text x="180" y="98" text-anchor="middle" font-size="9">weights</text>
+  <text x="180" y="120" text-anchor="middle" font-size="9" fill="#6b7280">no data or recipe</text>
+  <text x="180" y="138" text-anchor="middle" font-size="8.5" fill="#6b7280">license may limit</text>
+  <rect x="240" y="30" width="108" height="118" rx="9" fill="#fff" stroke="#d97706" stroke-width="1.6"/>
+  <text x="294" y="48" text-anchor="middle" font-size="11" font-weight="600" fill="#d97706">Open-source</text>
+  <text x="294" y="64" text-anchor="middle" font-size="9" fill="#6b7280">data + code + method</text>
+  <text x="294" y="86" text-anchor="middle" font-size="9">reproducible</text>
+  <text x="294" y="98" text-anchor="middle" font-size="9">from scratch</text>
+  <text x="294" y="120" text-anchor="middle" font-size="9" fill="#6b7280">rare</text>
+  <text x="294" y="138" text-anchor="middle" font-size="8.5" fill="#6b7280">full control</text>
+  <text x="20" y="183" font-size="9" fill="#6b7280">convenience</text>
+  <line x1="84" y1="179" x2="276" y2="179" stroke="#6b7280" stroke-width="1.3" marker-end="url(#lnd2a)"/>
+  <text x="340" y="183" text-anchor="end" font-size="9" fill="#6b7280">control</text>
+</svg>`,
       explanation:
         'People say "open" to mean three different things, and the differences matter for cost, privacy, and control. A closed model is one you can only use through the provider, as a service, with no access to the files inside. An open-weight model ships the trained weights so you can run it yourself, but you usually do not get the training data or the recipe, and the license may restrict commercial use. A truly open-source model also releases the training data, code, and method so the result can be reproduced from scratch, which is rare. The trade-off is roughly control versus convenience: closed models give you the strongest capability and zero infrastructure work but the least control over data and pricing, while open-weight models give you full control and local privacy at the cost of running the hardware yourself.',
       keyTerms: [
@@ -61,6 +116,39 @@ const mod: Category = {
     },
     {
       heading: 'Reading a model like a spec sheet',
+      video: { url: "https://www.youtube.com/watch?v=V_ME2osV7BU", title: "Pick the Perfect LLM: Performance vs Cost vs Speed Analysis", channel: "Satyajit Pattnaik" },
+      caption:
+        'Compare every model on the same rows. How good, how much per million tokens, how fast, how much it reads at once, and what kinds of input it takes.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="lnd3t" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fill="#1c1d1f">
+  <title id="lnd3t">A model spec sheet: capability, cost, speed, context length, modality, and family size</title>
+  <text x="180" y="18" text-anchor="middle" font-size="12.5" font-weight="700">Read a model like a spec sheet</text>
+  <rect x="14" y="28" width="332" height="158" rx="10" fill="#fff" stroke="#e6dfce" stroke-width="1.5"/>
+  <text x="28" y="54" font-size="10.5" font-weight="600">Capability</text>
+  <rect x="232" y="46" width="14" height="12" rx="2" fill="#2f8cff"/>
+  <rect x="250" y="46" width="14" height="12" rx="2" fill="#2f8cff"/>
+  <rect x="268" y="46" width="14" height="12" rx="2" fill="#2f8cff"/>
+  <rect x="286" y="46" width="14" height="12" rx="2" fill="#2f8cff"/>
+  <rect x="304" y="46" width="14" height="12" rx="2" fill="#efe9da" stroke="#e6dfce" stroke-width="1"/>
+  <line x1="24" y1="64" x2="336" y2="64" stroke="#f0ead9" stroke-width="1"/>
+  <text x="28" y="78" font-size="10.5" font-weight="600">Cost</text>
+  <text x="336" y="78" text-anchor="end" font-size="9.5" fill="#6b7280">$ per 1M tokens, input + output</text>
+  <line x1="24" y1="88" x2="336" y2="88" stroke="#f0ead9" stroke-width="1"/>
+  <text x="28" y="102" font-size="10.5" font-weight="600">Speed</text>
+  <text x="336" y="102" text-anchor="end" font-size="9.5" fill="#6b7280">first word, then words per second</text>
+  <line x1="24" y1="112" x2="336" y2="112" stroke="#f0ead9" stroke-width="1"/>
+  <text x="28" y="126" font-size="10.5" font-weight="600">Context</text>
+  <text x="336" y="126" text-anchor="end" font-size="9.5" fill="#6b7280">how many tokens it reads at once</text>
+  <line x1="24" y1="136" x2="336" y2="136" stroke="#f0ead9" stroke-width="1"/>
+  <text x="28" y="150" font-size="10.5" font-weight="600">Modality</text>
+  <rect x="216" y="140" width="36" height="14" rx="4" fill="#efe9da" stroke="#e6dfce" stroke-width="1"/><text x="234" y="150" text-anchor="middle" font-size="8.5">text</text>
+  <rect x="256" y="140" width="40" height="14" rx="4" fill="#efe9da" stroke="#e6dfce" stroke-width="1"/><text x="276" y="150" text-anchor="middle" font-size="8.5">image</text>
+  <rect x="300" y="140" width="40" height="14" rx="4" fill="#efe9da" stroke="#e6dfce" stroke-width="1"/><text x="320" y="150" text-anchor="middle" font-size="8.5">audio</text>
+  <line x1="24" y1="160" x2="336" y2="160" stroke="#f0ead9" stroke-width="1"/>
+  <text x="28" y="174" font-size="10.5" font-weight="600">Family</text>
+  <rect x="244" y="164" width="26" height="14" rx="4" fill="#fff" stroke="#1f7a50" stroke-width="1.2"/><text x="257" y="174" text-anchor="middle" font-size="8.5" fill="#1f7a50">S</text>
+  <rect x="278" y="164" width="26" height="14" rx="4" fill="#fff" stroke="#2f8cff" stroke-width="1.2"/><text x="291" y="174" text-anchor="middle" font-size="8.5" fill="#0b5394">M</text>
+  <rect x="312" y="164" width="26" height="14" rx="4" fill="#fff" stroke="#d97706" stroke-width="1.2"/><text x="325" y="174" text-anchor="middle" font-size="8.5" fill="#d97706">L</text>
+</svg>`,
       explanation:
         'Every model can be compared on a handful of dimensions, and learning to read them turns a confusing catalog into a shopping list. Capability is how good the answers are on the work you actually care about. Cost is usually quoted per million tokens of input and output, so longer prompts and longer answers cost more. Speed has two parts: how long until the first word appears and how many words per second after that. Context length is how much text the model can consider at once. Modality is which kinds of input and output it handles, such as text only or also images, audio, and video. A model family is a set of related sizes from one provider, where the bigger members are smarter but slower and pricier and the smaller ones are cheaper and faster.',
       keyTerms: [
@@ -83,6 +171,32 @@ const mod: Category = {
     },
     {
       heading: 'Choosing well and staying flexible',
+      video: { url: "https://www.youtube.com/watch?v=YwkvZnbE7R8", title: "Which LLM Should You Use For Building AI Applications | Considerations for Model Picking", channel: "The GRAPH Courses" },
+      caption:
+        'Write down what the job needs, then start with the cheapest model that might clear the bar and step up only when it falls short. Keep the model name in one place so you can swap later.',
+      svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="lnd4t" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" fill="#1c1d1f">
+  <title id="lnd4t">Start with the cheapest model that clears your bar and escalate only when it falls short</title>
+  <style>.lnd4g{animation:lnd4p 2.8s ease-in-out infinite}@keyframes lnd4p{0%,100%{opacity:1}50%{opacity:.6}}@media (prefers-reduced-motion:reduce){.lnd4g{animation:none}}</style>
+  <defs><marker id="lnd4a" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6b7280"/></marker></defs>
+  <text x="180" y="18" text-anchor="middle" font-size="12.5" font-weight="700">Start cheap, escalate only if it fails</text>
+  <rect x="12" y="34" width="118" height="132" rx="9" fill="#fff" stroke="#e6dfce" stroke-width="1.5"/>
+  <text x="71" y="52" text-anchor="middle" font-size="10.5" font-weight="600" fill="#0b5394">Write the needs</text>
+  <text x="26" y="74" font-size="9.5">quality bar</text>
+  <text x="26" y="92" font-size="9.5">cost ceiling</text>
+  <text x="26" y="110" font-size="9.5">speed</text>
+  <text x="26" y="128" font-size="9.5">context size</text>
+  <text x="26" y="146" font-size="9.5">data rules</text>
+  <line x1="130" y1="100" x2="150" y2="100" stroke="#6b7280" stroke-width="1.5" marker-end="url(#lnd4a)"/>
+  <rect x="216" y="56" width="96" height="28" rx="6" fill="#fff" stroke="#d97706" stroke-width="1.5"/><text x="264" y="74" text-anchor="middle" font-size="10" fill="#d97706">large / frontier</text>
+  <rect x="186" y="92" width="96" height="28" rx="6" fill="#fff" stroke="#2f8cff" stroke-width="1.5"/><text x="234" y="110" text-anchor="middle" font-size="10" fill="#0b5394">medium</text>
+  <rect class="lnd4g" x="156" y="128" width="96" height="28" rx="6" fill="#fff" stroke="#1f7a50" stroke-width="1.6"/><text x="204" y="146" text-anchor="middle" font-size="10" fill="#1f7a50">small + cheap</text>
+  <line x1="212" y1="128" x2="228" y2="121" stroke="#6b7280" stroke-width="1.4" marker-end="url(#lnd4a)"/>
+  <line x1="242" y1="92" x2="258" y2="85" stroke="#6b7280" stroke-width="1.4" marker-end="url(#lnd4a)"/>
+  <text x="330" y="104" text-anchor="end" font-size="8.5" fill="#6b7280">step up if it falls short</text>
+  <line x1="252" y1="142" x2="296" y2="142" stroke="#1f7a50" stroke-width="1.5" marker-end="url(#lnd4a)"/>
+  <rect x="298" y="131" width="54" height="22" rx="6" fill="#efe9da" stroke="#1f7a50" stroke-width="1.5"/><text x="325" y="146" text-anchor="middle" font-size="9" fill="#1f7a50">ship it</text>
+  <text x="180" y="182" text-anchor="middle" font-size="9.5" fill="#6b7280">test on your own examples, keep the model name in one place to swap later</text>
+</svg>`,
       explanation:
         'A good choice starts from the task, not from the brand. Write down what the job needs in terms of quality, the most you are willing to pay per request, how fast it must feel, how much text it must read at once, and any rules about where data may go. Then start with the cheapest model that plausibly clears the quality bar and only move up if it falls short, because paying for frontier capability on an easy task is wasteful. Treat benchmarks as a rough first filter, never the final word, and always test on your own examples. Finally, assume your pick will be outdated within months. Keep the model name in one place in your code, keep your prompts and tests separate from any one vendor, and you can swap to a better or cheaper model later with a small change instead of a rewrite.',
       keyTerms: [

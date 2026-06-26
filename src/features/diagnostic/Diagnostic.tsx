@@ -95,7 +95,7 @@ export default function Diagnostic() {
 
   if (phase === 'intro') {
     return (
-      <div className="view">
+      <div className="view view-task">
         <h2 className="section">Placement test</h2>
         <Panel>
           <div style={{ fontWeight: 700, fontSize: 18 }}>
@@ -129,7 +129,7 @@ export default function Diagnostic() {
   if (!current) {
     // No card available (empty deck). Fall back to a graceful message.
     return (
-      <div className="view">
+      <div className="view view-task">
         <h2 className="section">Placement test</h2>
         <Panel>
           <p className="muted" style={{ margin: 0 }}>
@@ -143,7 +143,7 @@ export default function Diagnostic() {
   const questionNumber = responses.length + 1;
 
   return (
-    <div className="view">
+    <div className="view view-task">
       <h2 className="section">Placement test</h2>
 
       <Panel>
@@ -296,7 +296,7 @@ function DoneScreen({ onRetake }: { onRetake: () => void }) {
   const diagnostic = useStore((s) => s.diagnostic);
   if (!diagnostic) {
     return (
-      <div className="view">
+      <div className="view view-task">
         <h2 className="section">Placement test</h2>
         <Panel>
           <p className="muted" style={{ margin: 0 }}>
@@ -325,7 +325,7 @@ function DoneScreen({ onRetake }: { onRetake: () => void }) {
     .sort((a, b) => a.ability - b.ability);
 
   return (
-    <div className="view">
+    <div className="view view-task">
       <h2 className="section">Placement results</h2>
 
       <div className="grid" style={{ gridTemplateColumns: '1fr' }}>

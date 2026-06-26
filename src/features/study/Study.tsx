@@ -255,7 +255,7 @@ export default function Study() {
   }
 
   return (
-    <div className="view">
+    <div className="view view-task">
       <h2 className="section">Study</h2>
       <Panel>
         <div className="study-bar">

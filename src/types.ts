@@ -8,16 +8,26 @@ export interface KeyTerm {
   definition: string;
 }
 
-export interface BreakdownSection {
-  heading: string;
-  explanation: string;
-  keyTerms: KeyTerm[];
-}
-
 export interface VideoRef {
   url: string;
   title: string;
   channel: string;
+}
+
+export interface BreakdownSection {
+  heading: string;
+  // Full prose, now used as the optional "Read more" detail behind a toggle.
+  explanation: string;
+  keyTerms: KeyTerm[];
+  // Optional diagram-led fields layered on for the "See how it works" view.
+  // caption: 1-2 short plain sentences that explain the visual quickly.
+  caption?: string;
+  // svg: a single self-contained inline <svg> string (with xmlns) that
+  // schematically visualizes this one concept. Injected via
+  // dangerouslySetInnerHTML, so it must be valid standalone SVG markup.
+  svg?: string;
+  // video: a curated YouTube explainer for this concept.
+  video?: VideoRef;
 }
 
 export interface Card {

@@ -18,6 +18,7 @@ const mod: Category = {
   "breakdown": [
     {
       "heading": "Why use more than one agent",
+      "video": { "url": "https://www.youtube.com/watch?v=sWH0T4Zez6I", "title": "Multi Agent Systems Explained: How AI Agents & LLMs Work Together", "channel": "IBM Technology" },
       "explanation": "A single agent holds one conversation, one set of instructions, and one growing pile of context. That works until the task gets large or has very different parts. As the context fills with unrelated detail, a single agent loses focus and quality drops. Splitting the work lets each agent keep a short, focused context and a narrow job, which often raises quality and lets independent parts run in parallel. The trade is real: every extra agent is another full model running, so you pay more tokens, add coordination overhead, and create new ways for the pieces to disagree or drop the ball. Multi-agent designs earn their keep when the work genuinely separates into distinct skills or parallel chunks, not when you are just adding agents for their own sake.",
       "keyTerms": [
         {
@@ -32,10 +33,42 @@ const mod: Category = {
           "term": "parallelism",
           "definition": "Running independent sub-tasks at the same time on separate agents to finish sooner, possible only when the sub-tasks do not depend on each other's output."
         }
-      ]
+      ],
+      "caption": "One agent juggling everything loses focus as its context fills up. Splitting the work gives each agent a short context and one job, and independent parts can run at the same time.",
+      "svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<title>One overloaded agent versus several focused agents</title>
+<style>.ma1dot{animation:ma1flow 2.4s linear infinite}@keyframes ma1flow{0%{transform:translateX(0);opacity:0}15%{opacity:1}85%{opacity:1}100%{transform:translateX(40px);opacity:0}}@media (prefers-reduced-motion: reduce){.ma1dot{animation:none;opacity:0}}</style>
+<defs><marker id="ma1ar" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#6b7280"/></marker></defs>
+<rect x="0.5" y="0.5" width="359" height="199" rx="10" fill="#ffffff" stroke="#e6dfce"/>
+<text x="70" y="30" font-size="12" font-weight="600" fill="#1c1d1f" text-anchor="middle">One agent</text>
+<rect x="22" y="40" width="96" height="118" rx="8" fill="#efe9da" stroke="#e6dfce"/>
+<text x="70" y="56" font-size="9.5" fill="#6b7280" text-anchor="middle">mixed context</text>
+<rect x="34" y="66" width="72" height="7" rx="2" fill="#2f8cff"/>
+<rect x="34" y="79" width="60" height="7" rx="2" fill="#d97706"/>
+<rect x="34" y="92" width="76" height="7" rx="2" fill="#1f7a50"/>
+<rect x="34" y="105" width="54" height="7" rx="2" fill="#0b5394"/>
+<rect x="34" y="118" width="70" height="7" rx="2" fill="#6b7280"/>
+<rect x="34" y="131" width="62" height="7" rx="2" fill="#d97706"/>
+<text x="70" y="152" font-size="9" fill="#dc2626" text-anchor="middle">focus drops</text>
+<line x1="124" y1="100" x2="166" y2="100" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ma1ar)"/>
+<text x="145" y="92" font-size="9" fill="#6b7280" text-anchor="middle">split</text>
+<circle class="ma1dot" cx="126" cy="100" r="3" fill="#2f8cff"/>
+<text x="272" y="30" font-size="12" font-weight="600" fill="#1c1d1f" text-anchor="middle">Focused agents</text>
+<rect x="196" y="42" width="150" height="32" rx="7" fill="#ffffff" stroke="#e6dfce"/>
+<circle cx="212" cy="58" r="6" fill="#2f8cff"/>
+<rect x="226" y="54" width="104" height="7" rx="2" fill="#efe9da"/>
+<rect x="196" y="82" width="150" height="32" rx="7" fill="#ffffff" stroke="#e6dfce"/>
+<circle cx="212" cy="98" r="6" fill="#1f7a50"/>
+<rect x="226" y="94" width="104" height="7" rx="2" fill="#efe9da"/>
+<rect x="196" y="122" width="150" height="32" rx="7" fill="#ffffff" stroke="#e6dfce"/>
+<circle cx="212" cy="138" r="6" fill="#0b5394"/>
+<rect x="226" y="134" width="104" height="7" rx="2" fill="#efe9da"/>
+<text x="272" y="172" font-size="9.5" fill="#6b7280" text-anchor="middle">short context, runs in parallel</text>
+</svg>`
     },
     {
       "heading": "The main coordination patterns",
+      "video": { "url": "https://www.youtube.com/watch?v=l_i7icCA56c", "title": "5 Multi-Agent Orchestration Patterns You MUST Know in 2025!", "channel": "AI Anytime" },
       "explanation": "A few shapes cover most multi-agent designs. In orchestrator-worker, one lead agent breaks the goal into sub-tasks, hands each to a worker agent, and assembles the results. The workers do not see the whole picture, only their slice. In a pipeline, agents are chained in a fixed order and each one's output is the next one's input, like an assembly line. In debate (or ensemble), several agents tackle the same question independently and their answers are compared or voted on to surface a stronger result. In the supervisor-and-critic pattern, one agent produces work and another agent reviews it, catching errors before the output ships. Real systems often combine these: an orchestrator whose workers each run a small pipeline, with a critic checking the final assembly.",
       "keyTerms": [
         {
@@ -54,10 +87,49 @@ const mod: Category = {
           "term": "supervisor / critic",
           "definition": "A reviewer agent that checks another agent's output for errors, policy violations, or missed requirements before it is accepted, adding a second set of eyes."
         }
-      ]
+      ],
+      "caption": "Most designs are one of four shapes. An orchestrator hands slices to workers, a pipeline chains steps in order, a debate compares independent answers, and a critic reviews another agent's work.",
+      "svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<title>Four common multi-agent coordination patterns</title>
+<style>.ma2p{animation:ma2pulse 2.6s ease-in-out infinite}@keyframes ma2pulse{0%,100%{opacity:1}50%{opacity:.5}}@media (prefers-reduced-motion: reduce){.ma2p{animation:none}}</style>
+<defs><marker id="ma2ar" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#6b7280"/></marker></defs>
+<rect x="0.5" y="0.5" width="359" height="199" rx="10" fill="#ffffff" stroke="#e6dfce"/>
+<line x1="180" y1="16" x2="180" y2="184" stroke="#e6dfce"/>
+<line x1="16" y1="100" x2="344" y2="100" stroke="#e6dfce"/>
+<text x="97" y="30" font-size="9.5" font-weight="600" fill="#1c1d1f" text-anchor="middle">orchestrator-worker</text>
+<circle cx="97" cy="46" r="7" fill="#0b5394"/>
+<line x1="97" y1="53" x2="61" y2="76" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="97" y1="53" x2="97" y2="76" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="97" y1="53" x2="133" y2="76" stroke="#6b7280" stroke-width="1.3"/>
+<circle cx="61" cy="82" r="6" fill="#2f8cff"/>
+<circle cx="97" cy="82" r="6" fill="#2f8cff"/>
+<circle cx="133" cy="82" r="6" fill="#2f8cff"/>
+<text x="263" y="30" font-size="9.5" font-weight="600" fill="#1c1d1f" text-anchor="middle">pipeline</text>
+<rect x="206" y="52" width="30" height="20" rx="4" fill="#efe9da" stroke="#e6dfce"/>
+<rect x="256" y="52" width="30" height="20" rx="4" fill="#efe9da" stroke="#e6dfce"/>
+<rect x="306" y="52" width="30" height="20" rx="4" fill="#efe9da" stroke="#e6dfce"/>
+<line x1="237" y1="62" x2="254" y2="62" stroke="#6b7280" stroke-width="1.3" marker-end="url(#ma2ar)"/>
+<line x1="287" y1="62" x2="304" y2="62" stroke="#6b7280" stroke-width="1.3" marker-end="url(#ma2ar)"/>
+<text x="97" y="122" font-size="9.5" font-weight="600" fill="#1c1d1f" text-anchor="middle">debate / vote</text>
+<circle cx="52" cy="134" r="5" fill="#2f8cff"/>
+<circle cx="52" cy="150" r="5" fill="#2f8cff"/>
+<circle cx="52" cy="166" r="5" fill="#2f8cff"/>
+<line x1="57" y1="134" x2="116" y2="148" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="57" y1="150" x2="116" y2="150" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="57" y1="166" x2="116" y2="152" stroke="#6b7280" stroke-width="1.3"/>
+<circle class="ma2p" cx="128" cy="150" r="11" fill="#1f7a50"/>
+<path d="M123,150 l4,4 l7,-8" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="263" y="122" font-size="9.5" font-weight="600" fill="#1c1d1f" text-anchor="middle">worker / critic</text>
+<rect x="200" y="138" width="46" height="26" rx="5" fill="#efe9da" stroke="#e6dfce"/>
+<text x="223" y="155" font-size="9" fill="#1c1d1f" text-anchor="middle">work</text>
+<line x1="247" y1="151" x2="285" y2="151" stroke="#6b7280" stroke-width="1.3" marker-end="url(#ma2ar)"/>
+<rect x="288" y="138" width="46" height="26" rx="5" fill="#ffffff" stroke="#1f7a50"/>
+<path d="M305,151 l4,4 l7,-8" stroke="#1f7a50" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`
     },
     {
       "heading": "How agents talk to each other",
+      "video": { "url": "https://www.youtube.com/watch?v=WTr6mHTw5cM", "title": "Understanding multi-agent handoffs", "channel": "LangChain" },
       "explanation": "Agents do not literally 'know' about each other. Communication is something you wire up. The simplest form is message passing: one agent's text output becomes part of another agent's prompt, often through a handoff where the first agent decides the second should take over and bundles up what it learned. A second form is shared memory (sometimes called a blackboard): a common space, like a scratchpad file or a database, that every agent can read and write, so they coordinate through a shared record instead of direct messages. The hard part is that natural-language messages are lossy. If the orchestrator's summary to a worker omits a detail, the worker simply never has it. So the quality of the handoff and how much context you pass along often matters more than the cleverness of the pattern.",
       "keyTerms": [
         {
@@ -72,10 +144,41 @@ const mod: Category = {
           "term": "message passing",
           "definition": "Coordination by feeding one agent's output into another agent's input as text, the most common and simplest way agents communicate."
         }
-      ]
+      ],
+      "caption": "Agents only share what you wire up. Either one passes a note into another's prompt, which can drop details, or every agent reads and writes one shared scratchpad.",
+      "svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<title>Message passing between agents versus a shared blackboard</title>
+<style>.ma3p{animation:ma3pulse 2.6s ease-in-out infinite}@keyframes ma3pulse{0%,100%{opacity:1}50%{opacity:.45}}@media (prefers-reduced-motion: reduce){.ma3p{animation:none}}</style>
+<defs><marker id="ma3ar" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#6b7280"/></marker></defs>
+<rect x="0.5" y="0.5" width="359" height="199" rx="10" fill="#ffffff" stroke="#e6dfce"/>
+<line x1="180" y1="18" x2="180" y2="182" stroke="#e6dfce"/>
+<text x="92" y="30" font-size="10" font-weight="600" fill="#1c1d1f" text-anchor="middle">message passing</text>
+<rect x="22" y="82" width="38" height="30" rx="6" fill="#efe9da" stroke="#e6dfce"/>
+<text x="41" y="102" font-size="12" font-weight="600" fill="#1c1d1f" text-anchor="middle">A</text>
+<rect x="124" y="82" width="38" height="30" rx="6" fill="#efe9da" stroke="#e6dfce"/>
+<text x="143" y="102" font-size="12" font-weight="600" fill="#1c1d1f" text-anchor="middle">B</text>
+<rect x="79" y="74" width="26" height="22" rx="2" fill="#ffffff" stroke="#e6dfce"/>
+<path d="M99,74 l6,6 l-6,0 z" fill="#efe9da"/>
+<line x1="83" y1="82" x2="97" y2="82" stroke="#6b7280" stroke-width="1"/>
+<line x1="83" y1="87" x2="95" y2="87" stroke="#6b7280" stroke-width="1"/>
+<line x1="60" y1="97" x2="79" y2="90" stroke="#6b7280" stroke-width="1.3"/>
+<line x1="105" y1="90" x2="124" y2="97" stroke="#6b7280" stroke-width="1.3" marker-end="url(#ma3ar)"/>
+<text class="ma3p" x="92" y="132" font-size="8.5" fill="#dc2626" text-anchor="middle">lossy note</text>
+<text x="268" y="30" font-size="10" font-weight="600" fill="#1c1d1f" text-anchor="middle">shared memory</text>
+<rect x="206" y="50" width="124" height="40" rx="6" fill="#efe9da" stroke="#e6dfce"/>
+<text x="268" y="74" font-size="10" fill="#1c1d1f" text-anchor="middle">blackboard</text>
+<line x1="224" y1="130" x2="224" y2="92" stroke="#6b7280" stroke-width="1.3" marker-start="url(#ma3ar)" marker-end="url(#ma3ar)"/>
+<line x1="268" y1="130" x2="268" y2="92" stroke="#6b7280" stroke-width="1.3" marker-start="url(#ma3ar)" marker-end="url(#ma3ar)"/>
+<line x1="312" y1="130" x2="312" y2="92" stroke="#6b7280" stroke-width="1.3" marker-start="url(#ma3ar)" marker-end="url(#ma3ar)"/>
+<circle cx="224" cy="140" r="10" fill="#2f8cff"/>
+<circle cx="268" cy="140" r="10" fill="#2f8cff"/>
+<circle cx="312" cy="140" r="10" fill="#2f8cff"/>
+<text x="268" y="172" font-size="9" fill="#6b7280" text-anchor="middle">all read and write</text>
+</svg>`
     },
     {
       "heading": "Failure modes, cost, and when one agent is better",
+      "video": { "url": "https://www.youtube.com/watch?v=2lTFI6FAqhk", "title": "Single Agent Vs. Multi-Agent Systems in AI | How To Choose The Right Architecture", "channel": "Snowflake Developers" },
       "explanation": "Multi-agent systems inherit every single-agent failure and add new ones. Coordination failures happen when agents duplicate work, leave gaps between their slices, or contradict each other. Error propagation is worse than in one agent: a mistake by an early agent gets passed downstream as if it were fact, and a critic that rubber-stamps gives false confidence. Cost and latency multiply: five agents is roughly five times the tokens, and a long chain is only as fast as its slowest link. Debugging is harder because a wrong final answer might come from any agent or any handoff. The practical lesson is that a single strong agent with good tools is often simpler, cheaper, and easier to trust than a crowd of weaker ones. Add agents only when the task clearly splits into different skills or parallel work, and always measure the whole system end to end, not each agent alone.",
       "keyTerms": [
         {
@@ -94,7 +197,34 @@ const mod: Category = {
           "term": "end-to-end evaluation",
           "definition": "Judging a multi-agent system by its final output and overall cost, not by each agent in isolation, since the failure may live in the seams between agents."
         }
-      ]
+      ],
+      "caption": "A mistake by an early agent gets passed along as fact and corrupts later steps. And every extra agent adds tokens, so five agents cost about five times one.",
+      "svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 200" width="100%" preserveAspectRatio="xMidYMid meet" role="img" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+<title>An early error spreads downstream and more agents cost more</title>
+<style>.ma4dot{animation:ma4flow 2.8s linear infinite}@keyframes ma4flow{0%{transform:translateX(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateX(240px);opacity:0}}@media (prefers-reduced-motion: reduce){.ma4dot{animation:none;opacity:0}}</style>
+<defs><marker id="ma4ar" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 z" fill="#6b7280"/></marker></defs>
+<rect x="0.5" y="0.5" width="359" height="199" rx="10" fill="#ffffff" stroke="#e6dfce"/>
+<text x="18" y="26" font-size="10" font-weight="600" fill="#1c1d1f" text-anchor="start">An early error spreads downstream</text>
+<line x1="58" y1="66" x2="114" y2="66" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ma4ar)"/>
+<line x1="138" y1="66" x2="194" y2="66" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ma4ar)"/>
+<line x1="218" y1="66" x2="274" y2="66" stroke="#6b7280" stroke-width="1.5" marker-end="url(#ma4ar)"/>
+<circle cx="46" cy="66" r="12" fill="#ffffff" stroke="#dc2626" stroke-width="2"/>
+<path d="M40,60 l12,12 M52,60 l-12,12" stroke="#dc2626" stroke-width="1.6" stroke-linecap="round"/>
+<circle cx="126" cy="66" r="12" fill="#ffffff" stroke="#e6dfce"/>
+<circle cx="134" cy="58" r="2.5" fill="#dc2626"/>
+<circle cx="206" cy="66" r="12" fill="#ffffff" stroke="#e6dfce"/>
+<circle cx="214" cy="58" r="2.5" fill="#dc2626"/>
+<circle cx="286" cy="66" r="12" fill="#ffffff" stroke="#e6dfce"/>
+<circle cx="294" cy="58" r="2.5" fill="#dc2626"/>
+<circle class="ma4dot" cx="58" cy="66" r="3" fill="#dc2626"/>
+<text x="86" y="50" font-size="8" fill="#dc2626" text-anchor="middle">error</text>
+<text x="18" y="132" font-size="10" font-weight="600" fill="#1c1d1f" text-anchor="start">More agents cost more</text>
+<rect x="18" y="142" width="40" height="12" rx="2" fill="#6b7280"/>
+<text x="64" y="152" font-size="8" fill="#6b7280" text-anchor="start">1 agent</text>
+<rect x="18" y="162" width="200" height="12" rx="2" fill="#d97706"/>
+<text x="224" y="172" font-size="8" fill="#6b7280" text-anchor="start">5 agents, about 5x</text>
+<text x="18" y="190" font-size="8.5" fill="#6b7280" text-anchor="start">a chain is only as fast as its slowest step</text>
+</svg>`
     }
   ],
   "cards": [

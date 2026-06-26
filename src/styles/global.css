@@ -28,9 +28,12 @@ a {
 }
 
 .wrap {
-  max-width: 1080px;
+  width: 100%;
+  /* Generous cap only to avoid absurd line lengths on very large monitors;
+     otherwise the header, nav, and every tab fill the viewport. */
+  max-width: 1720px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 20px clamp(16px, 4vw, 48px);
 }
 
 /* Header / brand */
@@ -89,6 +92,15 @@ h2.section {
 }
 .view {
   margin-top: 18px;
+}
+/* Task-flow views (Home, Study, Diagnostic) are single-focus reading columns.
+   Centering them at a comfortable width keeps a flashcard or one question from
+   stretching edge to edge on a wide monitor, while the data-rich tabs (Learn,
+   Dashboard) stay full width. */
+.view-task {
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
 }
 .muted {
   color: var(--muted);
