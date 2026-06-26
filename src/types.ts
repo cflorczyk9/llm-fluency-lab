@@ -3,6 +3,8 @@
 
 export type Difficulty = 'core' | 'intermediate' | 'advanced';
 
+export type LevelKey = 'beginner' | 'intermediate' | 'expert';
+
 export interface KeyTerm {
   term: string;
   definition: string;
@@ -111,4 +113,77 @@ export interface Settings {
   interleave: boolean;
   dailyNewCap: number;
   hideAdvanced: boolean;
+}
+
+// --- Learning levels (guided paths over the deck) ---
+// Static curriculum types (LevelPlan, LevelSection, ScheduleDay, ...) live in
+// data/levels.ts. The types below are the per-user runtime state, persisted in
+// the store and synced like the rest of the snapshot.
+
+// One generated multiple-choice option for a section-test question.
+export interface TestOption {
+  id: string;
+  text: string;
+  correct: boolean;
+}
+
+// A generated section-test question. Normally multiple-choice; when a card's
+// answer makes poor options, `selfRate` is set and the runner falls back to
+// reveal-and-rate for that item.
+export interface TestQuestion {
+  cardId: string;
+  categoryKey: string;
+  subtopic: string;
+  difficulty: Difficulty;
+  prompt: string; // the card's question
+  answer: string; // the correct answer (shown on reveal)
+  options: TestOption[]; // shuffled; exactly one correct (empty when selfRate)
+  selfRate?: boolean;
+}
+
+export interface TestQuestionResult {
+  cardId: string;
+  categoryKey: string;
+  subtopic: string;
+  difficulty: Difficulty;
+  correct: boolean;
+  chosen?: string; // chosen option text, or self-rating
+}
+
+export interface SectionTestAttempt {
+  sectionId: string;
+  level: LevelKey;
+  startedAt: number;
+  completedAt: number;
+  scorePct: number;
+  passThresholdPct: number;
+  passed: boolean;
+  questions: TestQuestionResult[];
+  weakModuleKeys: string[];
+}
+
+export type SectionStatus = 'locked' | 'available' | 'passed';
+
+export interface SectionProgress {
+  sectionId: string;
+  status: SectionStatus;
+  bestScorePct?: number;
+  attempts: number;
+  lastAttemptAt?: number;
+}
+
+export interface LevelEnrollment {
+  level: LevelKey;
+  startedAt: number;
+  anchorDate: string; // YYYY-MM-DD of day 1
+  currentDayIndex: number; // 1-based pointer into the flattened schedule
+  sectionProgress: Record<string, SectionProgress>;
+  attempts: SectionTestAttempt[];
+}
+
+// A flagged module in the post-test gap analysis.
+export interface WeakModule {
+  moduleKey: string;
+  weakness: number; // 0..1, higher = study more
+  missedSubtopics: string[];
 }

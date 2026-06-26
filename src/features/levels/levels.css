@@ -1,0 +1,338 @@
+/* Learning levels feature: level picker, today view, schedule, section tests,
+   results. Reuses the app's tokens so it sits in the same warm family. */
+
+/* --- Level picker --- */
+.level-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  margin-top: 16px;
+}
+.level-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+.level-card h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.level-eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+.level-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.level-meta b {
+  color: var(--ink);
+}
+.level-blurb {
+  font-size: 13.5px;
+  line-height: 1.5;
+  flex: 1;
+}
+.level-card .btn {
+  margin-top: 4px;
+}
+.level-aside {
+  text-align: center;
+  margin-top: 18px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* --- Today view --- */
+.today-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.today-week {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.today-day-label {
+  font-weight: 700;
+  font-size: 18px;
+}
+.today-progress {
+  font-size: 13px;
+  color: var(--muted);
+}
+.today-activity {
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 14px 0;
+}
+.today-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.today-cta-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.today-modules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+/* --- Section status chips --- */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.sec-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--muted);
+}
+.sec-chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.sec-chip.available {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.sec-chip.available .dot {
+  background: var(--accent);
+}
+.sec-chip.passed {
+  color: var(--good-ink);
+  border-color: var(--good-border);
+  background: var(--good-bg);
+}
+.sec-chip.passed .dot {
+  background: var(--good-ink);
+}
+.sec-chip.locked {
+  opacity: 0.6;
+}
+
+/* --- Schedule overview --- */
+.sched-week {
+  margin-top: 18px;
+}
+.sched-week-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.sched-week-num {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-deep);
+  font-weight: 700;
+}
+.sched-week-theme {
+  font-size: 14px;
+  color: var(--muted);
+}
+.sched-day {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  background: var(--panel);
+  font-size: 13.5px;
+}
+.sched-day.today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.sched-day.test {
+  background: var(--panel2);
+}
+.sched-day .d-label {
+  font-weight: 700;
+  color: var(--muted);
+}
+.sched-day .d-meta {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* --- Section test runner --- */
+.test-stage {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.test-progress {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--panel2);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.test-progress > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.25s ease;
+}
+.test-prompt {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.test-options {
+  display: grid;
+  gap: 10px;
+}
+.test-option {
+  text-align: left;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.test-option:hover {
+  border-color: var(--accent);
+}
+.test-option.selected {
+  border-color: var(--accent);
+  background: var(--panel2);
+}
+.test-option.correct {
+  border-color: var(--good-border);
+  background: var(--good-bg);
+  color: var(--good-ink);
+}
+.test-option.wrong {
+  border-color: var(--again-border);
+  background: var(--again-bg);
+  color: var(--again-ink);
+}
+.test-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+.test-selfrate {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* --- Results + remediation --- */
+.results-score {
+  text-align: center;
+  padding: 8px 0 4px;
+}
+.results-score .big {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+}
+.results-verdict {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+.results-verdict.pass {
+  color: var(--good-ink);
+}
+.results-verdict.fail {
+  color: var(--accent-deep);
+}
+.remediation {
+  margin-top: 18px;
+}
+.remediation-intro {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--panel2);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.weak-module {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 13px 15px;
+  margin-bottom: 10px;
+  background: var(--panel);
+}
+.weak-module h4 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+.weak-bar {
+  height: 6px;
+  border-radius: 4px;
+  background: var(--panel2);
+  overflow: hidden;
+  margin: 8px 0;
+}
+.weak-bar > i {
+  display: block;
+  height: 100%;
+  background: var(--accent-deep);
+}
+.weak-subtopics {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.weak-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.results-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  justify-content: center;
+}
