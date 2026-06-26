@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Category, CardState } from '../../types';
 import { useStore } from '../../store/store';
+import { track } from '../analytics/track';
 import { emptyState } from '../../lib/fsrs';
 import { cardFluency, categoryFluency } from '../../lib/fluency';
 import ConceptTile from './ConceptTile';
@@ -81,7 +82,10 @@ export default function CategoryRow({ category, step }: CategoryRowProps) {
     const next = !open;
     setOpen(next);
     if (!next) setOpenConcept(null); // start clean next time the module opens
-    if (next && !started) startLesson(category.key);
+    if (next) {
+      if (!started) startLesson(category.key);
+      track('module_opened', { key: category.key, tier: category.tier });
+    }
   }
 
   function toggleSet(
@@ -157,7 +161,18 @@ export default function CategoryRow({ category, step }: CategoryRowProps) {
                   allowFullScreen
                 />
                 <div className="vmeta">
-                  <a href={category.video.url} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={category.video.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() =>
+                      track('video_opened', {
+                        source: 'learn_lesson',
+                        key: category.key,
+                        url: category.video?.url,
+                      })
+                    }
+                  >
                     {category.video.title}
                   </a>{' '}
                   &middot; {category.video.channel}

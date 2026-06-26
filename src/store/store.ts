@@ -31,7 +31,7 @@ const DEFAULT_SETTINGS: Settings = {
   hideAdvanced: false,
 };
 
-interface PersistedState {
+export interface PersistedState {
   cardStates: Record<string, CardState>;
   program: ProgramPlan | null;
   diagnostic: DiagnosticResult | null;
@@ -39,6 +39,10 @@ interface PersistedState {
   dailyLog: DailyLogEntry[];
   settings: Settings;
 }
+
+// The cloud-sync snapshot is exactly the locally persisted state. Keeping these
+// the same shape means export/import and cloud push/pull all move one object.
+export type Snapshot = PersistedState;
 
 interface StoreActions {
   gradeCard: (cardId: string, rating: Rating) => void;
@@ -51,6 +55,10 @@ interface StoreActions {
   resetAll: () => void;
   exportJSON: () => string;
   importJSON: (text: string) => void;
+
+  // Object-level snapshot access for cloud sync (no JSON round-trip).
+  getSnapshot: () => Snapshot;
+  loadSnapshot: (snap: Snapshot) => void;
 
   // Selectors / helpers
   getCardState: (id: string) => CardState;
@@ -171,14 +179,23 @@ export const useStore = create<Store>()(
       },
 
       importJSON: (text) => {
-        const parsed = JSON.parse(text) as Partial<PersistedState>;
+        const parsed = JSON.parse(text) as Partial<Snapshot>;
+        get().loadSnapshot(parsed as Snapshot);
+      },
+
+      getSnapshot: () => {
+        const { cardStates, program, diagnostic, lessons, dailyLog, settings } = get();
+        return { cardStates, program, diagnostic, lessons, dailyLog, settings };
+      },
+
+      loadSnapshot: (snap) => {
         set({
-          cardStates: parsed.cardStates ?? {},
-          program: parsed.program ?? null,
-          diagnostic: parsed.diagnostic ?? null,
-          lessons: parsed.lessons ?? {},
-          dailyLog: parsed.dailyLog ?? [],
-          settings: { ...DEFAULT_SETTINGS, ...(parsed.settings ?? {}) },
+          cardStates: snap.cardStates ?? {},
+          program: snap.program ?? null,
+          diagnostic: snap.diagnostic ?? null,
+          lessons: snap.lessons ?? {},
+          dailyLog: snap.dailyLog ?? [],
+          settings: { ...DEFAULT_SETTINGS, ...(snap.settings ?? {}) },
         });
       },
 

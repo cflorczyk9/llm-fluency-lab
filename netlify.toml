@@ -1,0 +1,16 @@
+# Netlify deploy config for LLM Fluency Lab (static Vite SPA).
+#
+# Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Netlify site env
+# (Site settings -> Environment variables) to turn on cloud sync. Without them
+# the deployed site still works, fully local-first.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Single-page app: serve index.html for any unknown path so deep links and the
+# magic-link auth redirect land on the app instead of a 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

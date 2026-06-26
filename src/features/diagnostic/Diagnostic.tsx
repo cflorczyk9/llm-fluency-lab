@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import ProgressBar from '../../components/ProgressBar';
 import { useStore } from '../../store/store';
 import { categories } from '../../data/content';
+import { track } from '../analytics/track';
 import type { DiagnosticResponse } from '../../types';
 
 import {
@@ -87,6 +88,11 @@ export default function Diagnostic() {
     if (done) {
       const result = scoreDiagnostic(categories, next, Date.now());
       setDiagnostic(result);
+      track('diagnostic_completed', {
+        overall: result.overall,
+        calibration: result.calibration,
+        tested: next.length,
+      });
       setPhase('done');
     } else {
       setPhase('confidence');

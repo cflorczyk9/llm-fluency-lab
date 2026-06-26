@@ -2,8 +2,10 @@
 
 A local-first web app for learning how large language models actually work, from
 the ground up. You watch a short lesson, check that you understood it, then lock
-it in with spaced repetition. Everything stays in your browser. There is no
-account, no server, and no tracking.
+it in with spaced repetition. By default everything stays in your browser with no
+account and no tracking. If you want your progress to follow you across devices,
+you can optionally sign in with an email link and it syncs to the cloud (see
+[Cloud sync](#cloud-sync-optional)).
 
 The curriculum is written for a smart, curious person who is not necessarily
 technical. Every card has a precise answer and a plain-English version with a
@@ -49,9 +51,9 @@ Test-time Compute, The Model Landscape, Data and Privacy, Where It Is Heading
 (Frontier).
 
 Each module carries its tier, a few learning objectives ("by the end you will be
-able to..."), and three to six breakdown sections with a glossary. Ten of the
-modules also include a short, hand-picked explainer video from a reputable
-channel. The newer modules have no video and lean on the written breakdown.
+able to..."), and three to six breakdown sections with a glossary. Every module
+now pairs its written breakdown with short, hand-picked explainer videos from
+reputable channels, curated per section.
 
 ### Difficulty mix
 
@@ -154,4 +156,56 @@ npm run typecheck  # tsc --noEmit
 ```
 
 Built with React, TypeScript, Vite, Zustand for state, ts-fsrs for scheduling,
-and Recharts for the dashboard. No backend.
+and Recharts for the dashboard. The app runs with no backend; cloud sync is an
+optional add-on (below).
+
+## Cloud sync (optional)
+
+By default the app is fully local: your progress lives in the browser under
+`localStorage` and never leaves the device. Cloud sync is opt-in and adds the
+ability to sign in with an email link so your progress follows you across
+devices. It is backed by [Supabase](https://supabase.com) (auth + a single
+`progress` table). When the env vars below are absent, none of this code runs and
+there is no account UI at all.
+
+How sign-in reconciles data, so you never lose progress: when you sign in, the
+app pulls your cloud snapshot, merges it with whatever is already on the device
+(per card it keeps the more recently reviewed state, never a blind overwrite),
+saves the merged result, and pushes it back so the device and cloud agree. After
+that, changes push up automatically, debounced. Signing out leaves your local
+data untouched.
+
+To turn it on:
+
+1. Create a free Supabase project.
+2. In the project's SQL editor, run `supabase/migrations/0001_progress.sql`. It
+   creates the `progress` table with Row Level Security so each user can only
+   ever read or write their own row.
+3. Under Authentication, make sure email sign-in is enabled, and add your site
+   URL (e.g. `http://localhost:5173` for dev and your production URL) to the
+   allowed redirect URLs.
+4. Copy `.env.example` to `.env` and fill in `VITE_SUPABASE_URL` and
+   `VITE_SUPABASE_ANON_KEY` from Project Settings → API. Both are public,
+   browser-safe values; RLS is what protects the data.
+
+### Usage analytics
+
+When cloud sync is on, the app also records lightweight usage events **for
+signed-in users only** — there is no anonymous tracking. Each event is one row
+in an `events` table (migration `0002_events.sql`), tied to the user and guarded
+by the same Row Level Security: a user can insert and read only their own
+events. The tracked events are: tab/view opened, module opened, card graded
+(with the rating), video opened, and diagnostic completed.
+
+You (the project owner) aggregate across all users from the Supabase SQL editor
+with the service role, which bypasses RLS. The migration file includes ready-to-
+run example queries (most-opened modules, hardest cards, most-visited tabs).
+
+## Deploying
+
+The app is a static Vite build (`npm run build` → `dist/`), so any static host
+works. A `netlify.toml` is included: point Netlify at the repo, and it builds
+with `npm run build`, publishes `dist`, and serves `index.html` for any path (so
+deep links and the email sign-in redirect resolve). For cloud sync in
+production, set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the host's
+environment variables.
