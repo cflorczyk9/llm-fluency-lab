@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import Button from './components/Button';
 import Tabs, { type TabItem } from './components/Tabs';
+import AccountBar from './features/auth/AccountBar';
+import { isSupabaseConfigured } from './lib/supabase';
 import { useStore } from './store/store';
 
 import Program from './features/program/Program';
@@ -141,6 +143,7 @@ export default function App() {
             style={{ display: 'none' }}
             onChange={handleImportFile}
           />
+          <AccountBar />
         </div>
       </header>
 
@@ -148,7 +151,11 @@ export default function App() {
         <ActiveView view={view} />
       </main>
 
-      <footer>Local-first. Your progress stays in this browser.</footer>
+      <footer>
+        {isSupabaseConfigured
+          ? 'Local-first. Your progress stays in this browser, and syncs across devices when you sign in.'
+          : 'Local-first. Your progress stays in this browser.'}
+      </footer>
     </div>
   );
 }
